@@ -1,19 +1,19 @@
 # KeyPulse Development Status
 
-Current Phase: P1 (accepted, user hand-tests still open)
+Current Phase: P2 (self-test complete)
 
 ## Completed
 
 - P0 Environment Preparation
 - P1 Technical Spike
+- P2 Project skeleton
 
 ## Current
 
-- Ready for P2 Project skeleton
+- Ready for P3 Input capture after total-control acceptance
 
 ## Pending
 
-- P2 Project skeleton
 - P3 Input capture
 - P4 Aggregation
 - P5 SQLite persistence
@@ -31,17 +31,15 @@ Current Phase: P1 (accepted, user hand-tests still open)
 
 ## Last Verified Commit
 
-`b1108ee` — `spike: validate raw input, tray, and sqlite`
+P2 `feat: initialize project architecture`
 
 ## Known Issues
 
 - Inno Setup not installed (P16)
 - DB Browser for SQLite not installed (optional)
-- Default `dotnet --version` is 9.0.203; project must pin `net8.0-windows`
+- `global.json` now pins SDK 8.0.425 (`rollForward: latestFeature`); default global `dotnet` without this file may still be 9.x
 - PRD lists dark mode as a V1.1 candidate; UI / architecture treat Light/Dark/System as V1.0. Resolve before P7
 - Formal `.ico` not generated yet (P16)
 - Spike.Input WPF working set was ~270 MB during a mouse flood; watch memory in P14
-- User has not hand-tested Microsoft Pinyin, tray overflow visuals, fullscreen, or a 5–10 minute real mouse run. Not a P2 blocker; complete before P3 acceptance
-- Synthetic SendInput keys arrived as `VKey=0` (`VK_00`). P3 KeyMapper must prefer scan code when VKey is 0 or `VK_PROCESSKEY`
-- Spike.Tray uses `Icon.FromHandle(GetHicon())` without `DestroyIcon`; fix in P6
-- Spike writes `%TEMP%\KeyPulseSpike\input-status.txt` every second. Do not copy that pattern into the product
+- User has not hand-tested Microsoft Pinyin, tray overflow visuals, fullscreen, or a 5–10 minute real mouse run. Complete before P3 acceptance
+- Tests project is `net8.0-windows` because it references Infrastructure; Core remains `net8.0`
