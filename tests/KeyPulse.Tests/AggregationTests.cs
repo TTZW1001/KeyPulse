@@ -107,6 +107,23 @@ public class AggregationTests
     }
 
     [Fact]
+    public void Merge_RestoresSwappedIncrementIntoActive()
+    {
+        using var aggregator = Create();
+        aggregator.Record(Key("A"));
+        aggregator.Record(Key("A"));
+        var batch = aggregator.SwapForFlush();
+        Assert.Empty(aggregator.CaptureSnapshot().KeyCounts);
+
+        aggregator.Record(Key("B"));
+        aggregator.Merge(batch);
+
+        var snap = aggregator.CaptureSnapshot();
+        Assert.Equal(2, snap.KeyCounts["A"]);
+        Assert.Equal(1, snap.KeyCounts["B"]);
+    }
+
+    [Fact]
     public void AppCounts_StayEmpty()
     {
         using var aggregator = Create();

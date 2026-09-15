@@ -4,6 +4,7 @@ using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure;
 using KeyPulse.Infrastructure.Logging;
+using KeyPulse.Infrastructure.Persistence;
 using KeyPulse.Infrastructure.System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,6 +33,7 @@ public partial class App : Application
                 .ConfigureServices(services =>
                 {
                     services.AddKeyPulseInfrastructure();
+                    services.AddHostedService(sp => sp.GetRequiredService<FlushService>());
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<MainWindow>();
                 })
@@ -39,6 +41,7 @@ public partial class App : Application
 
             await _host.StartAsync();
             await _host.Services.GetRequiredService<IAppHost>().StartAsync();
+            _host.Services.GetRequiredService<IStatisticsAggregator>();
             var capture = _host.Services.GetRequiredService<IInputCapture>();
             await capture.StartAsync();
             if (capture.Error is not null)
@@ -65,6 +68,7 @@ public partial class App : Application
             if (_host is not null)
             {
                 await _host.Services.GetRequiredService<IInputCapture>().StopAsync();
+                await _host.Services.GetRequiredService<IFlushService>().FlushNowAsync();
                 await _host.Services.GetRequiredService<IAppHost>().StopAsync();
                 await _host.StopAsync(TimeSpan.FromSeconds(5));
                 _host.Dispose();

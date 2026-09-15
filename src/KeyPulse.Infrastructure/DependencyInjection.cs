@@ -2,6 +2,8 @@ using KeyPulse.Core.Interfaces;
 using KeyPulse.Infrastructure.Aggregation;
 using KeyPulse.Infrastructure.Hosting;
 using KeyPulse.Infrastructure.Input;
+using KeyPulse.Infrastructure.Persistence;
+using KeyPulse.Infrastructure.Persistence.Repositories;
 using KeyPulse.Infrastructure.System;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +21,13 @@ public static class DependencyInjection
         services.AddSingleton<InputAggregator>();
         services.AddSingleton<IStatisticsAggregator>(sp => sp.GetRequiredService<InputAggregator>());
         services.AddSingleton<IStatisticsReader>(sp => sp.GetRequiredService<InputAggregator>());
+        services.AddSingleton<PersistenceOptions>();
+        services.AddSingleton<SqliteConnectionFactory>();
+        services.AddSingleton<MigrationRunner>();
+        services.AddSingleton<DatabaseInitializer>();
+        services.AddSingleton<IStatisticsRepository, StatisticsRepository>();
+        services.AddSingleton<FlushService>();
+        services.AddSingleton<IFlushService>(sp => sp.GetRequiredService<FlushService>());
         return services;
     }
 }

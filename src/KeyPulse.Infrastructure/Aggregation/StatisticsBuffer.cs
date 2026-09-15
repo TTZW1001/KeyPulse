@@ -102,6 +102,34 @@ internal sealed class StatisticsBuffer
             LastInputTime);
     }
 
+    public void Merge(StatisticsBatch batch)
+    {
+        foreach (var pair in batch.KeyCountsByDate)
+        {
+            foreach (var key in pair.Value)
+            {
+                var mapKey = (pair.Key, key.Key);
+                _keyCounts[mapKey] = _keyCounts.GetValueOrDefault(mapKey) + key.Value;
+            }
+        }
+
+        foreach (var pair in batch.MouseByDate)
+        {
+            Mouse(pair.Key).Add(pair.Value);
+        }
+
+        foreach (var pair in batch.HourlyCounts)
+        {
+            Hour(pair.Key).Add(pair.Value);
+        }
+
+        if (batch.LastInputTime is { } time &&
+            (LastInputTime is null || time > LastInputTime))
+        {
+            LastInputTime = time;
+        }
+    }
+
     private void AddKey(DateOnly date, string key)
     {
         var mapKey = (date, key);
@@ -189,6 +217,20 @@ internal sealed class StatisticsBuffer
             Left, Right, Middle, XButton1, XButton2,
             WheelUp, WheelDown, WheelLeft, WheelRight,
             DistancePixels);
+
+        public void Add(in MouseTotals totals)
+        {
+            Left += totals.Left;
+            Right += totals.Right;
+            Middle += totals.Middle;
+            XButton1 += totals.XButton1;
+            XButton2 += totals.XButton2;
+            WheelUp += totals.WheelUp;
+            WheelDown += totals.WheelDown;
+            WheelLeft += totals.WheelLeft;
+            WheelRight += totals.WheelRight;
+            DistancePixels += totals.DistancePixels;
+        }
     }
 
     private sealed class HourlyDay
@@ -200,5 +242,13 @@ internal sealed class StatisticsBuffer
 
         public HourlyActivity ToActivity() => new(
             KeyPressCount, MouseClickCount, WheelEventCount, MouseDistancePixels);
+
+        public void Add(in HourlyActivity activity)
+        {
+            KeyPressCount += activity.KeyPressCount;
+            MouseClickCount += activity.MouseClickCount;
+            WheelEventCount += activity.WheelEventCount;
+            MouseDistancePixels += activity.MouseDistancePixels;
+        }
     }
 }

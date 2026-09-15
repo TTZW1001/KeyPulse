@@ -93,6 +93,24 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
         }
     }
 
+    public void Merge(StatisticsBatch batch)
+    {
+        if (batch.IsEmpty)
+        {
+            return;
+        }
+
+        lock (_gate)
+        {
+            _active.Merge(batch);
+            if (batch.LastInputTime is { } time &&
+                (_lastInputTime is null || time > _lastInputTime))
+            {
+                _lastInputTime = time;
+            }
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)

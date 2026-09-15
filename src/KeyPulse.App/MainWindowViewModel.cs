@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
+using KeyPulse.Infrastructure.Persistence;
 
 namespace KeyPulse.App;
 
@@ -12,16 +13,23 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IStatisticsReader _reader;
     private readonly IStatisticsAggregator _aggregator;
     private readonly IInputCapture _capture;
+    private readonly IStatisticsRepository _repository;
+    private readonly IAppPaths _paths;
     private long _uiTicks;
+    private long _persistedKeysToday = -1;
 
     public MainWindowViewModel(
         IStatisticsReader reader,
         IStatisticsAggregator aggregator,
-        IInputCapture capture)
+        IInputCapture capture,
+        IStatisticsRepository repository,
+        IAppPaths paths)
     {
         _reader = reader;
         _aggregator = aggregator;
         _capture = capture;
+        _repository = repository;
+        _paths = paths;
         Refresh();
     }
 
@@ -71,9 +79,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
             builder.AppendLine("Error: " + _capture.Error);
         }
 
+        if (_uiTicks == 1 || _uiTicks % 5 == 0)
+        {
+            RefreshPersistedCount();
+        }
+
         builder.AppendLine("State: " + snap.State);
         builder.AppendLine("UI refresh: 1s");
         builder.AppendLine("UI ticks: " + _uiTicks);
+        builder.AppendLine("DB: " + _paths.DatabasePath);
+        if (_persistedKeysToday >= 0)
+        {
+            builder.AppendLine("Persisted today keys: " + _persistedKeysToday);
+        }
         if (snap.LastInputTime is not null)
         {
             builder.AppendLine("Last input: " + snap.LastInputTime.Value.ToLocalTime().ToString("HH:mm:ss"));
@@ -102,5 +120,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         StatsText = builder.ToString();
+    }
+
+    private void RefreshPersistedCount()
+    {
+        try
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            var rows = _repository.GetKeyStatsAsync(today, today).GetAwaiter().GetResult();
+            _persistedKeysToday = rows.Sum(row => row.PressCount);
+        }
+        catch
+        {
+            _persistedKeysToday = -1;
+        }
     }
 }

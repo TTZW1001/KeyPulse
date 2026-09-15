@@ -14,4 +14,6 @@ public interface IStatisticsAggregator
     StatisticsSnapshot CaptureSnapshot();
 
     StatisticsBatch SwapForFlush();
+
+    void Merge(StatisticsBatch batch);
 }

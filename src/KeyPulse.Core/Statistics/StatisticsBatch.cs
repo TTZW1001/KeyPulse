@@ -5,4 +5,10 @@ public sealed record StatisticsBatch(
     IReadOnlyDictionary<DateOnly, MouseTotals> MouseByDate,
     IReadOnlyDictionary<HourBucket, HourlyActivity> HourlyCounts,
     IReadOnlyDictionary<string, long> AppCounts,
-    DateTimeOffset? LastInputTime);
+    DateTimeOffset? LastInputTime)
+{
+    public bool IsEmpty =>
+        KeyCountsByDate.Count == 0 &&
+        MouseByDate.Count == 0 &&
+        HourlyCounts.Count == 0;
+}

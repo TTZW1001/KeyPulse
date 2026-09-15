@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P4 (accepted)
+Current Phase: P5 (self-test complete)
 
 ## Completed
 
@@ -9,14 +9,14 @@ Current Phase: P4 (accepted)
 - P2 Project skeleton
 - P3 Input capture
 - P4 Aggregation
+- P5 SQLite persistence
 
 ## Current
 
-- Ready for P5 SQLite persistence
+- Ready for P6 Tray and lifecycle after total-control acceptance
 
 ## Pending
 
-- P5 SQLite persistence
 - P6 Tray and lifecycle
 - P7 Base UI
 - P8 Dashboard
@@ -31,7 +31,7 @@ Current Phase: P4 (accepted)
 
 ## Last Verified Commit
 
-`8aa219b` — `feat: add statistics aggregation`
+P5 `feat: add sqlite persistence`
 
 ## Known Issues
 
@@ -42,7 +42,6 @@ Current Phase: P4 (accepted)
 - Formal `.ico` not generated yet (P16)
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
-- AppCounts reserved empty until P12
-- `InputAggregator` is currently resolved when the window is created, which is after Raw Input start; P5/P6 should resolve the aggregator first so startup events are not dropped
-- `hourly_activity_stats.active_seconds` is not in the P4 snapshot; P5 may persist 0 until AFK is implemented
-- Process restart still loses unflushed counts until P5
+- AppCounts / app tables reserved empty until P12
+- `active_seconds` persisted as 0 until AFK/activity sampling exists
+- Debug UI still shows unflushed memory snapshot; persisted today total is a side line, not a Dashboard
