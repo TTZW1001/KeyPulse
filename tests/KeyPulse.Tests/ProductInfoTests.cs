@@ -17,6 +17,12 @@ public class ProductInfoTests
     }
 
     [Fact]
+    public void Version_IsFinalV1Release()
+    {
+        Assert.Equal("1.0.0", ProductInfo.Version);
+    }
+
+    [Fact]
     public void PrivacyNotice_DoesNotPromiseToRecordText()
     {
         Assert.Contains("不记录输入内容", ProductInfo.PrivacyNotice, StringComparison.Ordinal);

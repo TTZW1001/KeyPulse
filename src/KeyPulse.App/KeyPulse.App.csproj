@@ -7,6 +7,7 @@
     <RootNamespace>KeyPulse.App</RootNamespace>
     <AssemblyName>KeyPulse</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\keypulse.ico</ApplicationIcon>
     <Product>KeyPulse</Product>
     <Version>1.0.0</Version>
     <Nullable>enable</Nullable>
@@ -31,6 +32,6 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="..\..\assets\logo.png" Link="Assets\logo.png" />
-    <None Include="..\..\assets\tray-icon.png" Link="tray-icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\assets\tray.ico" Link="tray.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

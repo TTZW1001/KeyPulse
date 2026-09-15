@@ -42,7 +42,7 @@ public sealed class TrayService : IDisposable
         _logger = logger;
         _ui = SynchronizationContext.Current;
 
-        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "tray-icon.png");
+        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "tray.ico");
         _colorIcon = TrayIconLoader.Load(iconPath, grayscale: false);
         _pausedIcon = TrayIconLoader.Load(iconPath, grayscale: true);
 
