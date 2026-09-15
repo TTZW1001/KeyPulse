@@ -13,6 +13,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IInputCapture _capture;
     private readonly DashboardViewModel _dashboard;
     private readonly KeyboardViewModel _keyboard;
+    private readonly MouseViewModel _mouse;
     private readonly object _dashboardPage;
     private readonly object _keyboardPage;
     private readonly object _mousePage;
@@ -34,6 +35,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _capture = capture;
         _dashboard = dashboard;
         _keyboard = keyboard;
+        _mouse = mouse;
         _dashboardPage = dashboard;
         _keyboardPage = keyboard;
         _mousePage = mouse;
@@ -78,6 +80,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         _dashboard.Refresh();
         _keyboard.Refresh();
+        if (SelectedItem.Page == AppPage.Mouse)
+        {
+            _mouse.Refresh();
+        }
+
         var state = _aggregator.State;
         if (_capture.Error is not null)
         {
@@ -119,5 +126,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             AppPage.Settings => _settingsPage,
             _ => _dashboardPage
         };
+        if (value.Page == AppPage.Mouse)
+        {
+            _mouse.Refresh();
+        }
     }
 }

@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddSingleton<IFlushService>(sp => sp.GetRequiredService<FlushService>());
         services.AddSingleton<IDashboardQuery, DashboardQueryService>();
         services.AddSingleton<IKeyboardQuery, KeyboardQueryService>();
+        services.AddSingleton<IMouseQuery, MouseQueryService>();
         return services;
     }
 }

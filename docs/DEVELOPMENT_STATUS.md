@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P9 (accepted)
+Current Phase: P10 (implemented, pending acceptance)
 
 ## Completed
 
@@ -14,14 +14,14 @@ Current Phase: P9 (accepted)
 - P7 Base UI
 - P8 Dashboard
 - P9 Keyboard heatmap
+- P10 Mouse page
 
 ## Current
 
-- Ready for P10 Mouse page
+- Ready for P11 Trends page
 
 ## Pending
 
-- P10 Mouse page
 - P11 Trends page
 - P12 Apps stats
 - P13 Settings
@@ -31,7 +31,7 @@ Current Phase: P9 (accepted)
 
 ## Last Verified Commit
 
-`4fb3fd6` — `feat: add keyboard heatmap`
+`0a6b8e0` — `feat: add mouse stats`
 
 ## Known Issues
 
@@ -46,4 +46,4 @@ Current Phase: P9 (accepted)
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Numpad Enter and main Enter share key_code `Enter`
-- Keyboard page refreshes from the 1s shell timer even when not visible; can later refresh only when selected
+- Keyboard page refreshes from the 1s shell timer even when not visible; mouse page only refreshes when selected
