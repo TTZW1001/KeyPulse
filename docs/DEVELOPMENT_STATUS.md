@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P4 (self-test complete)
+Current Phase: P4 (accepted)
 
 ## Completed
 
@@ -12,7 +12,7 @@ Current Phase: P4 (self-test complete)
 
 ## Current
 
-- Ready for P5 SQLite persistence after total-control acceptance
+- Ready for P5 SQLite persistence
 
 ## Pending
 
@@ -31,7 +31,7 @@ Current Phase: P4 (self-test complete)
 
 ## Last Verified Commit
 
-P4 `feat: add statistics aggregation`
+`8aa219b` — `feat: add statistics aggregation`
 
 ## Known Issues
 
@@ -43,4 +43,6 @@ P4 `feat: add statistics aggregation`
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
 - AppCounts reserved empty until P12
-- P4 does not persist; a process restart loses unflushed counts (expected until P5)
+- `InputAggregator` is currently resolved when the window is created, which is after Raw Input start; P5/P6 should resolve the aggregator first so startup events are not dropped
+- `hourly_activity_stats.active_seconds` is not in the P4 snapshot; P5 may persist 0 until AFK is implemented
+- Process restart still loses unflushed counts until P5
