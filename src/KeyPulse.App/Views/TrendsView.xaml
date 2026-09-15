@@ -1,0 +1,10 @@
+<UserControl x:Class="KeyPulse.App.Views.TrendsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="520" HorizontalAlignment="Left">
+        <TextBlock Text="暂时还没有图表" Style="{StaticResource PlaceholderTitle}"/>
+        <TextBlock Text="统计数据会在后续阶段接到这里。"
+                   Style="{StaticResource PlaceholderBody}"
+                   Margin="0,8,0,0"/>
+    </StackPanel>
+</UserControl>

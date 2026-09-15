@@ -1,4 +1,5 @@
 using System.Windows;
+using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 
 namespace KeyPulse.App.Services;
@@ -64,6 +65,12 @@ public sealed class ApplicationLifecycleService : IApplicationLifecycle, IDispos
         _window.ShowInTaskbar = true;
         _window.WindowState = WindowState.Normal;
         _window.Activate();
+    }
+
+    public void ShowSettings()
+    {
+        ShowMainWindow();
+        _window?.Navigate(AppPage.Settings);
     }
 
     public void RequestExit()

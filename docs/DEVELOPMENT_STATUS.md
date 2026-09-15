@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P6 (accepted)
+Current Phase: P7 (implemented, pending acceptance)
 
 ## Completed
 
@@ -11,14 +11,14 @@ Current Phase: P6 (accepted)
 - P4 Aggregation
 - P5 SQLite persistence
 - P6 Tray and lifecycle
+- P7 Base UI
 
 ## Current
 
-- Ready for P7 Base UI
+- Ready for P8 Dashboard
 
 ## Pending
 
-- P7 Base UI
 - P8 Dashboard
 - P9 Keyboard heatmap
 - P10 Mouse page
@@ -31,7 +31,7 @@ Current Phase: P6 (accepted)
 
 ## Last Verified Commit
 
-`eb29673` — `feat: add tray lifecycle`
+`d6af2c1` — `feat: add base ui shell`
 
 ## Known Issues
 
@@ -44,6 +44,5 @@ Current Phase: P6 (accepted)
 - AppCounts / app tables reserved empty until P12
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
 - Sleep/resume and logon autostart need user hand-tests
-- Debug UI is still the P5 skeleton; P7 replaces it with the product shell
-- Tray menu and Debug UI still call SQLite with `GetResult()` on the UI thread; make async in P8
-- Light/Dark: follow UI + architecture + implementation plan in P7 (PRD listed it as V1.1)
+- Tray menu still calls SQLite with `GetResult()` on the UI thread; make async in P8
+- Dashboard today totals are Snapshot-only (reset after Flush); P8 should add persisted + unflushed

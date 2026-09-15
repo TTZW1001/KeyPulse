@@ -8,5 +8,7 @@ public interface IApplicationLifecycle
 
     void ShowMainWindow();
 
+    void ShowSettings();
+
     void RequestExit();
 }

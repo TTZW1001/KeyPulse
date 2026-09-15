@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using KeyPulse.App.Services;
+using KeyPulse.App.ViewModels;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
@@ -21,6 +22,7 @@ public partial class App : System.Windows.Application
     private TrayService? _tray;
     private ApplicationLifecycleService? _lifecycle;
     private PowerEventService? _power;
+    private ThemeService? _theme;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -58,6 +60,13 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IApplicationLifecycle>(sp => sp.GetRequiredService<ApplicationLifecycleService>());
                     services.AddSingleton<TrayService>();
                     services.AddSingleton<PowerEventService>();
+                    services.AddSingleton<ThemeService>();
+                    services.AddSingleton<DashboardViewModel>();
+                    services.AddSingleton<KeyboardViewModel>();
+                    services.AddSingleton<MouseViewModel>();
+                    services.AddSingleton<TrendsViewModel>();
+                    services.AddSingleton<AppsViewModel>();
+                    services.AddSingleton<SettingsViewModel>();
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<MainWindow>();
                 })
@@ -73,6 +82,9 @@ public partial class App : System.Windows.Application
                 _host.Services.GetRequiredService<IStatisticsAggregator>()
                     .SetState(TrackingState.Error);
             }
+
+            _theme = _host.Services.GetRequiredService<ThemeService>();
+            _theme.Initialize();
 
             var window = _host.Services.GetRequiredService<MainWindow>();
             _lifecycle = _host.Services.GetRequiredService<ApplicationLifecycleService>();
@@ -106,6 +118,7 @@ public partial class App : System.Windows.Application
                 await _host.StopAsync(TimeSpan.FromSeconds(5));
                 _tray?.Dispose();
                 _power?.Dispose();
+                _theme?.Dispose();
                 _lifecycle?.Dispose();
                 _host.Dispose();
             }

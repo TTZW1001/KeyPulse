@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 
 namespace KeyPulse.Infrastructure.System;
@@ -8,7 +10,8 @@ public sealed class JsonUserSettings : IUserSettings
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     private readonly string _path;
@@ -24,6 +27,12 @@ public sealed class JsonUserSettings : IUserSettings
     {
         get => _file.HideToTrayHintDismissed;
         set => _file.HideToTrayHintDismissed = value;
+    }
+
+    public ThemeMode Theme
+    {
+        get => _file.Theme;
+        set => _file.Theme = value;
     }
 
     public void Save()
@@ -58,5 +67,7 @@ public sealed class JsonUserSettings : IUserSettings
     private sealed class SettingsFile
     {
         public bool HideToTrayHintDismissed { get; set; }
+
+        public ThemeMode Theme { get; set; } = ThemeMode.System;
     }
 }

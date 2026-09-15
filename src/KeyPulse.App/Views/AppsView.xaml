@@ -1,0 +1,10 @@
+<UserControl x:Class="KeyPulse.App.Views.AppsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="520" HorizontalAlignment="Left">
+        <TextBlock Text="暂时还没有应用统计数据" Style="{StaticResource PlaceholderTitle}"/>
+        <TextBlock Text="继续使用电脑后，这里会自动出现。"
+                   Style="{StaticResource PlaceholderBody}"
+                   Margin="0,8,0,0"/>
+    </StackPanel>
+</UserControl>

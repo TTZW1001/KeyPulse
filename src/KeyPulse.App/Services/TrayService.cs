@@ -60,7 +60,7 @@ public sealed class TrayService : IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_pauseItem);
         menu.Items.Add(_startupItem);
-        menu.Items.Add("设置", null, (_, _) => _lifecycle.ShowMainWindow());
+        menu.Items.Add("设置", null, (_, _) => _lifecycle.ShowSettings());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => _lifecycle.RequestExit());
         menu.Opening += (_, _) => RefreshMenu();

@@ -1,138 +1,120 @@
-using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KeyPulse.App.ViewModels;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
-using KeyPulse.Infrastructure.Persistence;
 
 namespace KeyPulse.App;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IStatisticsReader _reader;
     private readonly IStatisticsAggregator _aggregator;
     private readonly IInputCapture _capture;
-    private readonly IStatisticsRepository _repository;
-    private readonly IAppPaths _paths;
-    private long _uiTicks;
-    private long _persistedKeysToday = -1;
+    private readonly DashboardViewModel _dashboard;
+    private readonly object _dashboardPage;
+    private readonly object _keyboardPage;
+    private readonly object _mousePage;
+    private readonly object _trendsPage;
+    private readonly object _appsPage;
+    private readonly object _settingsPage;
 
     public MainWindowViewModel(
-        IStatisticsReader reader,
         IStatisticsAggregator aggregator,
         IInputCapture capture,
-        IStatisticsRepository repository,
-        IAppPaths paths)
+        DashboardViewModel dashboard,
+        KeyboardViewModel keyboard,
+        MouseViewModel mouse,
+        TrendsViewModel trends,
+        AppsViewModel apps,
+        SettingsViewModel settings)
     {
-        _reader = reader;
         _aggregator = aggregator;
         _capture = capture;
-        _repository = repository;
-        _paths = paths;
+        _dashboard = dashboard;
+        _dashboardPage = dashboard;
+        _keyboardPage = keyboard;
+        _mousePage = mouse;
+        _trendsPage = trends;
+        _appsPage = apps;
+        _settingsPage = settings;
+
+        NavigationItems = NavigationCatalog.Items;
+        SelectedItem = NavigationItems[0];
+        PageTitle = SelectedItem.Title;
+        CurrentPage = _dashboardPage;
         Refresh();
     }
 
-    public string Title => ProductInfo.Name;
+    public IReadOnlyList<NavigationItem> NavigationItems { get; }
 
-    public string PrivacyNotice => ProductInfo.PrivacyNotice;
+    [ObservableProperty]
+    private NavigationItem _selectedItem = NavigationCatalog.Items[0];
+
+    [ObservableProperty]
+    private object? _currentPage;
+
+    [ObservableProperty]
+    private string _pageTitle = NavigationCatalog.Items[0].Title;
 
     [ObservableProperty]
     private string _statusText = "正在统计";
 
     [ObservableProperty]
-    private string _pauseLabel = "暂停";
+    private bool _isPaused;
 
     [ObservableProperty]
-    private string _statsText = string.Empty;
+    private bool _showPauseBanner;
+
+    public void Navigate(AppPage page)
+    {
+        var item = NavigationItems.First(i => i.Page == page);
+        SelectedItem = item;
+    }
+
+    public void Refresh()
+    {
+        _dashboard.Refresh();
+        var state = _aggregator.State;
+        if (_capture.Error is not null)
+        {
+            state = TrackingState.Error;
+        }
+
+        IsPaused = state == TrackingState.Paused;
+        ShowPauseBanner = state is TrackingState.Paused or TrackingState.Error;
+        StatusText = state switch
+        {
+            TrackingState.Paused => "已暂停",
+            TrackingState.Error => "监听失败",
+            _ => "正在统计"
+        };
+    }
 
     [RelayCommand]
-    private void TogglePause()
+    private void Resume()
     {
         if (_aggregator.State == TrackingState.Error)
         {
             return;
         }
 
-        _aggregator.SetState(
-            _aggregator.State == TrackingState.Paused
-                ? TrackingState.Running
-                : TrackingState.Paused);
+        _aggregator.SetState(TrackingState.Running);
         Refresh();
     }
 
-    public void Refresh()
+    partial void OnSelectedItemChanged(NavigationItem value)
     {
-        _uiTicks++;
-        var snap = _reader.CaptureSnapshot();
-        PauseLabel = snap.State == TrackingState.Paused ? "恢复" : "暂停";
-        StatusText = snap.State switch
+        PageTitle = value.Title;
+        CurrentPage = value.Page switch
         {
-            TrackingState.Paused => "已暂停",
-            TrackingState.Error => "监听失败",
-            _ => "正在统计"
+            AppPage.Dashboard => _dashboardPage,
+            AppPage.Keyboard => _keyboardPage,
+            AppPage.Mouse => _mousePage,
+            AppPage.Trends => _trendsPage,
+            AppPage.Apps => _appsPage,
+            AppPage.Settings => _settingsPage,
+            _ => _dashboardPage
         };
-
-        var builder = new StringBuilder();
-        if (_capture.Error is not null)
-        {
-            builder.AppendLine("Error: " + _capture.Error);
-        }
-
-        if (_uiTicks == 1 || _uiTicks % 5 == 0)
-        {
-            RefreshPersistedCount();
-        }
-
-        builder.AppendLine("State: " + snap.State);
-        builder.AppendLine("UI refresh: 1s");
-        builder.AppendLine("UI ticks: " + _uiTicks);
-        builder.AppendLine("DB: " + _paths.DatabasePath);
-        if (_persistedKeysToday >= 0)
-        {
-            builder.AppendLine("Persisted today keys: " + _persistedKeysToday);
-        }
-        if (snap.LastInputTime is not null)
-        {
-            builder.AppendLine("Last input: " + snap.LastInputTime.Value.ToLocalTime().ToString("HH:mm:ss"));
-        }
-
-        builder.AppendLine();
-        foreach (var pair in snap.KeyCounts.OrderByDescending(p => p.Value).ThenBy(p => p.Key).Take(24))
-        {
-            builder.AppendLine($"{pair.Key}: {pair.Value}");
-        }
-
-        var mouse = snap.Mouse;
-        builder.AppendLine();
-        builder.AppendLine($"Left: {mouse.Left}   Right: {mouse.Right}   Middle: {mouse.Middle}");
-        builder.AppendLine($"XButton1: {mouse.XButton1}   XButton2: {mouse.XButton2}");
-        builder.AppendLine($"WheelUp: {mouse.WheelUp}   WheelDown: {mouse.WheelDown}");
-        builder.AppendLine($"Distance: {mouse.DistancePixels:0} px");
-
-        var now = DateTimeOffset.Now.ToLocalTime();
-        var currentHour = new HourBucket(DateOnly.FromDateTime(now.DateTime), now.Hour);
-        if (snap.HourlyCounts.TryGetValue(currentHour, out var hourly))
-        {
-            builder.AppendLine();
-            builder.AppendLine(
-                $"Hour {currentHour.Hour:00}: keys {hourly.KeyPressCount}  clicks {hourly.MouseClickCount}  wheel {hourly.WheelEventCount}");
-        }
-
-        StatsText = builder.ToString();
-    }
-
-    private void RefreshPersistedCount()
-    {
-        try
-        {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var rows = _repository.GetKeyStatsAsync(today, today).GetAwaiter().GetResult();
-            _persistedKeysToday = rows.Sum(row => row.PressCount);
-        }
-        catch
-        {
-            _persistedKeysToday = -1;
-        }
     }
 }
