@@ -6,7 +6,11 @@ public interface IExcludedAppList
 
     IReadOnlyList<string> Snapshot();
 
+    IReadOnlyList<ExcludedAppEntry> Entries();
+
     void Exclude(string processName);
+
+    void Remove(string processName);
 
     event Action? Changed;
 }

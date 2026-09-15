@@ -4,7 +4,21 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
         <StackPanel MaxWidth="640" HorizontalAlignment="Left">
-            <TextBlock Text="外观" Style="{StaticResource SectionTitleText}"/>
+            <TextBlock Text="常规" Style="{StaticResource SectionTitleText}"/>
+            <Border Style="{StaticResource SectionDivider}"/>
+
+            <CheckBox Content="开机自动启动"
+                      IsChecked="{Binding StartupEnabled, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="StartupEnabled"/>
+            <CheckBox Content="启动后最小化到托盘"
+                      IsChecked="{Binding StartMinimized, Mode=OneWay}"
+                      IsEnabled="False"
+                      AutomationProperties.AutomationId="StartMinimized"/>
+            <TextBlock Text="自启命令带 --startup，不弹出主窗口。"
+                       Style="{StaticResource SecondaryText}"
+                       Margin="22,0,0,4"/>
+
+            <TextBlock Text="外观" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>
 
             <DockPanel LastChildFill="True" Margin="0,0,0,8">
@@ -28,6 +42,60 @@
                 </StackPanel>
             </DockPanel>
 
+            <TextBlock Text="排除应用" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
+            <Border Style="{StaticResource SectionDivider}"/>
+            <TextBlock Text="按进程名排除。不保存完整路径。默认项不可删除。"
+                       Style="{StaticResource SecondaryText}"
+                       Margin="0,0,0,8"/>
+
+            <ItemsControl ItemsSource="{Binding ExcludedApps}"
+                          AutomationProperties.AutomationId="ExcludedList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel Margin="0,0,0,6" LastChildFill="True">
+                            <Button DockPanel.Dock="Right"
+                                    Content="移除"
+                                    Command="{Binding DataContext.RemoveExcludedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    IsEnabled="{Binding CanRemove}"
+                                    MinWidth="56"
+                                    Padding="8,2"
+                                    MinHeight="24"
+                                    AutomationProperties.AutomationId="ExcludeRemove"/>
+                            <TextBlock DockPanel.Dock="Right"
+                                       Text="{Binding StatusText}"
+                                       Style="{StaticResource SecondaryText}"
+                                       Margin="12,0"
+                                       VerticalAlignment="Center"
+                                       Width="36"/>
+                            <TextBlock Text="{Binding ProcessName}"
+                                       Style="{StaticResource BodyText}"
+                                       VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <DockPanel Margin="0,8,0,0" LastChildFill="True">
+                <Button DockPanel.Dock="Right"
+                        Content="浏览"
+                        Command="{Binding BrowseExcludedCommand}"
+                        Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="ExcludeBrowse"/>
+                <Button DockPanel.Dock="Right"
+                        Content="添加"
+                        Command="{Binding AddExcludedCommand}"
+                        AutomationProperties.AutomationId="ExcludeAdd"/>
+                <TextBox Text="{Binding NewProcessName, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource SettingInputBox}"
+                         Margin="0,0,8,0"
+                         AutomationProperties.AutomationId="ExcludeAddBox">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding AddExcludedCommand}"/>
+                    </TextBox.InputBindings>
+                </TextBox>
+            </DockPanel>
+
             <TextBlock Text="数据" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>
 
@@ -35,6 +103,41 @@
             <TextBox Text="{Binding DataPath, Mode=OneWay}"
                      Style="{StaticResource ReadOnlyPathBox}"
                      AutomationProperties.AutomationId="DataPathText"/>
+            <TextBlock Text="约每 60 秒写入磁盘。暂不支持按 AFK 自动暂停。"
+                       Style="{StaticResource SecondaryText}"
+                       Margin="0,8,0,12"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Button Content="导出 CSV"
+                        Command="{Binding ExportCommand}"
+                        AutomationProperties.AutomationId="ExportButton"/>
+                <Button Content="清空统计数据"
+                        Command="{Binding ClearStatsCommand}"
+                        Style="{StaticResource DangerButton}"
+                        Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="ClearStatsButton"/>
+            </StackPanel>
+            <TextBlock Text="{Binding DataStatus}"
+                       Style="{StaticResource SecondaryText}"
+                       AutomationProperties.AutomationId="DataStatus"/>
+
+            <TextBlock Text="关于" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
+            <Border Style="{StaticResource SectionDivider}"/>
+            <TextBlock Text="{Binding ProductName}"
+                       Style="{StaticResource BodyText}"
+                       AutomationProperties.AutomationId="AboutName"/>
+            <TextBlock Text="{Binding VersionText}"
+                       Style="{StaticResource SecondaryText}"
+                       Margin="0,4,0,0"
+                       AutomationProperties.AutomationId="AboutVersion"/>
+            <TextBlock Text="{Binding PrivacyNotice}"
+                       Style="{StaticResource SecondaryText}"
+                       Margin="0,4,0,0"
+                       AutomationProperties.AutomationId="AboutPrivacy"/>
+            <TextBlock Text="{Binding DataRoot, StringFormat=数据位置：{0}}"
+                       Style="{StaticResource SecondaryText}"
+                       Margin="0,4,0,8"
+                       AutomationProperties.AutomationId="AboutDataRoot"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

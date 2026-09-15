@@ -286,6 +286,44 @@ public sealed class StatisticsRepository : IStatisticsRepository
         return Task.FromResult<DateOnly?>(ParseDate(text));
     }
 
+    public Task ClearStatisticsAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        using var begin = connection.CreateCommand();
+        begin.CommandText = "BEGIN IMMEDIATE;";
+        begin.ExecuteNonQuery();
+
+        try
+        {
+            Execute(connection, "DELETE FROM daily_key_stats;");
+            Execute(connection, "DELETE FROM daily_mouse_stats;");
+            Execute(connection, "DELETE FROM hourly_activity_stats;");
+            Execute(connection, "DELETE FROM daily_app_stats;");
+            Execute(connection, "DELETE FROM app_registry;");
+
+            using var commit = connection.CreateCommand();
+            commit.CommandText = "COMMIT;";
+            commit.ExecuteNonQuery();
+        }
+        catch
+        {
+            using var rollback = connection.CreateCommand();
+            rollback.CommandText = "ROLLBACK;";
+            rollback.ExecuteNonQuery();
+            throw;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static void Execute(SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
+    }
+
     private static void UpsertKey(SqliteConnection connection, DateOnly date, string key, long count)
     {
         using var command = connection.CreateCommand();

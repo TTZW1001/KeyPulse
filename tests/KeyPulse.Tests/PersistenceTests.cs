@@ -251,5 +251,8 @@ public class PersistenceTests : IDisposable
 
         public Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<DateOnly?>(null);
+
+        public Task ClearStatisticsAsync(CancellationToken cancellationToken = default) =>
+            throw new IOException("simulated flush failure");
     }
 }

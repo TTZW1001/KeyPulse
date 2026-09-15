@@ -85,6 +85,54 @@ public sealed class ExcludedAppList : IExcludedAppList
         Changed?.Invoke();
     }
 
+    public IReadOnlyList<ExcludedAppEntry> Entries()
+    {
+        var list = new List<ExcludedAppEntry>(DefaultExcludedApps.Names.Length + 4);
+        foreach (var name in DefaultExcludedApps.Names)
+        {
+            list.Add(new ExcludedAppEntry(name, true));
+        }
+
+        lock (_gate)
+        {
+            foreach (var name in _user)
+            {
+                if (!DefaultExcludedApps.Contains(name))
+                {
+                    list.Add(new ExcludedAppEntry(name, false));
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public void Remove(string processName)
+    {
+        if (string.IsNullOrWhiteSpace(processName))
+        {
+            return;
+        }
+
+        var name = Path.GetFileName(processName.Trim());
+        if (string.IsNullOrWhiteSpace(name) || DefaultExcludedApps.Contains(name))
+        {
+            return;
+        }
+
+        lock (_gate)
+        {
+            if (!_user.Remove(name))
+            {
+                return;
+            }
+
+            SaveUnlocked();
+        }
+
+        Changed?.Invoke();
+    }
+
     private void Load()
     {
         try

@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P12 (accepted)
+Current Phase: P13 (accepted)
 
 ## Completed
 
@@ -17,21 +17,21 @@ Current Phase: P12 (accepted)
 - P10 Mouse page
 - P11 Trends page
 - P12 Apps stats
+- P13 Settings
 
 ## Current
 
-- Ready for P13 Settings
+- Ready for P14 Stability
 
 ## Pending
 
-- P13 Settings
 - P14 Stability
 - P15 Tests
 - P16 Packaging
 
 ## Last Verified Commit
 
-`15bcfc0` — `feat: add app stats`
+`feat: add settings`
 
 ## Known Issues
 
@@ -42,7 +42,9 @@ Current Phase: P12 (accepted)
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
 - Hourly `active_seconds` still 0; app-level `active_seconds` is a 1 s foreground sample estimate
+- AFK pause is not implemented; Flush stays 60 s
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Numpad Enter and main Enter share key_code `Enter`
 - Keyboard page still refreshes from the 1s shell timer when not visible
+- No DB backup / JSON export / clear-today (P13 shipped CSV export + clear-all only)

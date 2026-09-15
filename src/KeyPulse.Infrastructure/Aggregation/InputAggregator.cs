@@ -114,6 +114,16 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
         }
     }
 
+    public void Clear()
+    {
+        lock (_gate)
+        {
+            _active.Clear();
+            _flush.Clear();
+            _lastInputTime = null;
+        }
+    }
+
     public void Merge(StatisticsBatch batch)
     {
         if (batch.IsEmpty)

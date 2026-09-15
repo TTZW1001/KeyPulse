@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddSingleton<IMouseQuery, MouseQueryService>();
         services.AddSingleton<ITrendQuery, TrendQueryService>();
         services.AddSingleton<IAppQuery, AppQueryService>();
+        services.AddSingleton<IStatisticsExport, StatisticsExportService>();
         return services;
     }
 }

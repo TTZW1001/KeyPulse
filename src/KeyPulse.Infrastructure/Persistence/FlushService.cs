@@ -96,6 +96,23 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
         }
     }
 
+    public async Task ClearStatisticsAsync(CancellationToken cancellationToken = default)
+    {
+        await _flushLock.WaitAsync(cancellationToken);
+        try
+        {
+            await _repository.ClearStatisticsAsync(cancellationToken);
+            _aggregator.Clear();
+            _failures = 0;
+            _logger.LogInformation("Statistics cleared");
+            Flushed?.Invoke();
+        }
+        finally
+        {
+            _flushLock.Release();
+        }
+    }
+
     public void Dispose()
     {
         _cts.Cancel();

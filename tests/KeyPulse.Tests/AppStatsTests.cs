@@ -450,7 +450,12 @@ public class AppStatsTests : IDisposable
 
         public IReadOnlyList<string> Snapshot() => _names.ToList();
 
+        public IReadOnlyList<ExcludedAppEntry> Entries() =>
+            _names.Select(name => new ExcludedAppEntry(name, DefaultExcludedApps.Contains(name))).ToList();
+
         public void Exclude(string processName) => _names.Add(processName);
+
+        public void Remove(string processName) => _names.Remove(processName);
     }
 
     private sealed class StubResolver : IForegroundAppResolver

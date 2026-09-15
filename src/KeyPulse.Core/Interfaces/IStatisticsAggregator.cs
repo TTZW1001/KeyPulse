@@ -16,4 +16,6 @@ public interface IStatisticsAggregator
     StatisticsBatch SwapForFlush();
 
     void Merge(StatisticsBatch batch);
+
+    void Clear();
 }
