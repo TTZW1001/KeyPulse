@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
+
+# Build
+publish/
+release/
+
+# Temporary
+*.tmp
+*.log
+
+# Local environment test
+_env_test/
