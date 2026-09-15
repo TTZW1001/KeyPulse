@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P10 (implemented, pending acceptance)
+Current Phase: P10 (accepted)
 
 ## Completed
 
@@ -31,7 +31,7 @@ Current Phase: P10 (implemented, pending acceptance)
 
 ## Last Verified Commit
 
-`0a6b8e0` — `feat: add mouse stats`
+`4d3db9c` — `feat: add mouse stats`
 
 ## Known Issues
 
@@ -46,4 +46,4 @@ Current Phase: P10 (implemented, pending acceptance)
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Numpad Enter and main Enter share key_code `Enter`
-- Keyboard page refreshes from the 1s shell timer even when not visible; mouse page only refreshes when selected
+- Keyboard page still refreshes from the 1s shell timer when not visible
