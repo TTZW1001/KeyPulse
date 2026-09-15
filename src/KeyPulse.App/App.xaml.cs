@@ -31,6 +31,7 @@ public partial class App : Application
                 .ConfigureServices(services =>
                 {
                     services.AddKeyPulseInfrastructure();
+                    services.AddSingleton<DebugInputCounters>();
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<MainWindow>();
                 })
@@ -38,6 +39,7 @@ public partial class App : Application
 
             await _host.StartAsync();
             await _host.Services.GetRequiredService<IAppHost>().StartAsync();
+            await _host.Services.GetRequiredService<IInputCapture>().StartAsync();
 
             var window = _host.Services.GetRequiredService<MainWindow>();
             window.Show();
@@ -56,6 +58,7 @@ public partial class App : Application
         {
             if (_host is not null)
             {
+                await _host.Services.GetRequiredService<IInputCapture>().StopAsync();
                 await _host.Services.GetRequiredService<IAppHost>().StopAsync();
                 await _host.StopAsync(TimeSpan.FromSeconds(5));
                 _host.Dispose();

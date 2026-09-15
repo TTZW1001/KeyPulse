@@ -1,5 +1,6 @@
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Infrastructure.Hosting;
+using KeyPulse.Infrastructure.Input;
 using KeyPulse.Infrastructure.System;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +12,9 @@ public static class DependencyInjection
     {
         services.AddSingleton<IAppPaths, AppPaths>();
         services.AddSingleton<IAppHost, AppHost>();
+        services.AddSingleton<RawKeyboardParser>();
+        services.AddSingleton<RawMouseParser>();
+        services.AddSingleton<IInputCapture, RawInputService>();
         return services;
     }
 }
