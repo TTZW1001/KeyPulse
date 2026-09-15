@@ -23,3 +23,8 @@ release/
 
 # Local environment test
 _env_test/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
