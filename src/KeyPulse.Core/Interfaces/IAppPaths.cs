@@ -8,4 +8,5 @@ public interface IAppPaths
     string DatabasePath { get; }
     string ConfigDirectory { get; }
     string SettingsPath { get; }
+    string ExcludedAppsPath { get; }
 }

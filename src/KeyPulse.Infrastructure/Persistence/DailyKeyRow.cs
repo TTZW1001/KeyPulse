@@ -20,3 +20,13 @@ public sealed record DashboardSummary(
     long KeyPressCount,
     long MouseClickCount,
     double MouseDistancePixels);
+
+public sealed record DailyAppRow(
+    DateOnly Date,
+    string ProcessName,
+    string? DisplayName,
+    long KeyPressCount,
+    long MouseClickCount,
+    long WheelEventCount,
+    double MouseDistancePixels,
+    long ActiveSeconds);

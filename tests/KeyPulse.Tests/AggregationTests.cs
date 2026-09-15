@@ -124,12 +124,13 @@ public class AggregationTests
     }
 
     [Fact]
-    public void AppCounts_StayEmpty()
+    public void AppCounts_StayEmpty_WithoutForegroundCache()
     {
         using var aggregator = Create();
         aggregator.Record(Key("A"));
         Assert.Empty(aggregator.CaptureSnapshot().AppCounts);
         Assert.Empty(aggregator.SwapForFlush().AppCounts);
+        Assert.Empty(aggregator.CaptureUnflushed().AppStatsByDate);
     }
 
     [Fact]

@@ -108,6 +108,7 @@ public class PersistenceTests : IDisposable
             new Dictionary<DateOnly, MouseTotals>(),
             new Dictionary<HourBucket, HourlyActivity>(),
             new Dictionary<string, long>(),
+            new Dictionary<DateOnly, IReadOnlyDictionary<string, AppDayTotals>>(),
             null));
 
         using var connection = _factory.Open();
@@ -245,8 +246,8 @@ public class PersistenceTests : IDisposable
         public Task<IReadOnlyList<DailyKeyRow>> GetTrendAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<DailyKeyRow>>(Array.Empty<DailyKeyRow>());
 
-        public Task<IReadOnlyList<DailyKeyRow>> GetAppStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<DailyKeyRow>>(Array.Empty<DailyKeyRow>());
+        public Task<IReadOnlyList<DailyAppRow>> GetAppStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DailyAppRow>>(Array.Empty<DailyAppRow>());
 
         public Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<DateOnly?>(null);

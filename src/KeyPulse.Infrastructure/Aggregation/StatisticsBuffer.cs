@@ -9,10 +9,11 @@ internal sealed class StatisticsBuffer
     private readonly Dictionary<(DateOnly Date, string Key), long> _keyCounts = new();
     private readonly Dictionary<DateOnly, MouseDay> _mouseByDate = new();
     private readonly Dictionary<HourBucket, HourlyDay> _hourly = new();
+    private readonly Dictionary<DateOnly, Dictionary<string, AppDay>> _apps = new();
 
     public DateTimeOffset? LastInputTime { get; private set; }
 
-    public void Add(InputEvent inputEvent)
+    public void Add(InputEvent inputEvent, ForegroundApp? app)
     {
         var local = inputEvent.Timestamp.ToLocalTime();
         var date = DateOnly.FromDateTime(local.DateTime);
@@ -25,22 +26,54 @@ internal sealed class StatisticsBuffer
             case KeyPressedEvent key:
                 AddKey(date, key.Key.Name);
                 Hour(bucket).KeyPressCount++;
+                if (app is not null)
+                {
+                    App(date, app).KeyPressCount++;
+                }
+
                 break;
             case MouseButtonEvent button:
                 AddMouseButton(date, button.Button);
                 Hour(bucket).MouseClickCount++;
+                if (app is not null)
+                {
+                    App(date, app).MouseClickCount++;
+                }
+
                 break;
             case MouseWheelEvent wheel:
                 AddWheel(date, wheel);
                 Hour(bucket).WheelEventCount++;
+                if (app is not null)
+                {
+                    App(date, app).WheelEventCount++;
+                }
+
                 break;
             case MouseMoveEvent move:
                 var distance = Math.Sqrt(
                     ((double)move.DeltaX * move.DeltaX) + ((double)move.DeltaY * move.DeltaY));
                 Mouse(date).DistancePixels += distance;
                 Hour(bucket).MouseDistancePixels += distance;
+                if (app is not null)
+                {
+                    App(date, app).MouseDistancePixels += distance;
+                }
+
                 break;
         }
+    }
+
+    public void AddActive(ForegroundApp app, TimeSpan elapsed, DateTimeOffset timestamp)
+    {
+        if (elapsed < TimeSpan.FromMilliseconds(500) || elapsed > TimeSpan.FromSeconds(5))
+        {
+            return;
+        }
+
+        var seconds = Math.Max(1, (long)Math.Round(elapsed.TotalSeconds));
+        var date = DateOnly.FromDateTime(timestamp.ToLocalTime().DateTime);
+        App(date, app).ActiveSeconds += seconds;
     }
 
     public void Clear()
@@ -48,6 +81,7 @@ internal sealed class StatisticsBuffer
         _keyCounts.Clear();
         _mouseByDate.Clear();
         _hourly.Clear();
+        _apps.Clear();
         LastInputTime = null;
     }
 
@@ -70,7 +104,7 @@ internal sealed class StatisticsBuffer
             keys,
             mouse,
             CopyHourly(),
-            new Dictionary<string, long>(StringComparer.Ordinal),
+            CopyAppCounts(),
             LastInputTime);
     }
 
@@ -98,7 +132,8 @@ internal sealed class StatisticsBuffer
             keysByDate,
             mouseByDate,
             CopyHourly(),
-            new Dictionary<string, long>(StringComparer.Ordinal),
+            CopyAppCounts(),
+            CopyAppStats(),
             LastInputTime);
     }
 
@@ -121,6 +156,14 @@ internal sealed class StatisticsBuffer
         foreach (var pair in batch.HourlyCounts)
         {
             Hour(pair.Key).Add(pair.Value);
+        }
+
+        foreach (var day in batch.AppStatsByDate)
+        {
+            foreach (var app in day.Value)
+            {
+                App(day.Key, app.Key, app.Value.DisplayName).Add(app.Value);
+            }
         }
 
         if (batch.LastInputTime is { } time &&
@@ -189,12 +232,68 @@ internal sealed class StatisticsBuffer
         return hour;
     }
 
+    private AppDay App(DateOnly date, ForegroundApp app) =>
+        App(date, app.ProcessName, app.DisplayName);
+
+    private AppDay App(DateOnly date, string processName, string? displayName)
+    {
+        if (!_apps.TryGetValue(date, out var byName))
+        {
+            byName = new Dictionary<string, AppDay>(StringComparer.OrdinalIgnoreCase);
+            _apps[date] = byName;
+        }
+
+        if (!byName.TryGetValue(processName, out var day))
+        {
+            day = new AppDay { ProcessName = processName, DisplayName = displayName };
+            byName[processName] = day;
+        }
+        else if (string.IsNullOrWhiteSpace(day.DisplayName) &&
+                 !string.IsNullOrWhiteSpace(displayName))
+        {
+            day.DisplayName = displayName;
+        }
+
+        return day;
+    }
+
     private Dictionary<HourBucket, HourlyActivity> CopyHourly()
     {
         var copy = new Dictionary<HourBucket, HourlyActivity>();
         foreach (var pair in _hourly)
         {
             copy[pair.Key] = pair.Value.ToActivity();
+        }
+
+        return copy;
+    }
+
+    private Dictionary<string, long> CopyAppCounts()
+    {
+        var counts = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        foreach (var day in _apps.Values)
+        {
+            foreach (var app in day.Values)
+            {
+                counts[app.ProcessName] = counts.GetValueOrDefault(app.ProcessName) + app.ActivityCount;
+            }
+        }
+
+        return counts;
+    }
+
+    private Dictionary<DateOnly, IReadOnlyDictionary<string, AppDayTotals>> CopyAppStats()
+    {
+        var copy = new Dictionary<DateOnly, IReadOnlyDictionary<string, AppDayTotals>>();
+        foreach (var day in _apps)
+        {
+            var inner = new Dictionary<string, AppDayTotals>(StringComparer.OrdinalIgnoreCase);
+            foreach (var app in day.Value)
+            {
+                inner[app.Value.ProcessName] = app.Value.ToTotals();
+            }
+
+            copy[day.Key] = inner;
         }
 
         return copy;
@@ -249,6 +348,37 @@ internal sealed class StatisticsBuffer
             MouseClickCount += activity.MouseClickCount;
             WheelEventCount += activity.WheelEventCount;
             MouseDistancePixels += activity.MouseDistancePixels;
+        }
+    }
+
+    private sealed class AppDay
+    {
+        public string ProcessName = string.Empty;
+        public string? DisplayName;
+        public long KeyPressCount;
+        public long MouseClickCount;
+        public long WheelEventCount;
+        public double MouseDistancePixels;
+        public long ActiveSeconds;
+
+        public long ActivityCount => KeyPressCount + MouseClickCount + WheelEventCount;
+
+        public AppDayTotals ToTotals() => new(
+            KeyPressCount, MouseClickCount, WheelEventCount,
+            MouseDistancePixels, ActiveSeconds, DisplayName);
+
+        public void Add(in AppDayTotals totals)
+        {
+            KeyPressCount += totals.KeyPressCount;
+            MouseClickCount += totals.MouseClickCount;
+            WheelEventCount += totals.WheelEventCount;
+            MouseDistancePixels += totals.MouseDistancePixels;
+            ActiveSeconds += totals.ActiveSeconds;
+            if (string.IsNullOrWhiteSpace(DisplayName) &&
+                !string.IsNullOrWhiteSpace(totals.DisplayName))
+            {
+                DisplayName = totals.DisplayName;
+            }
         }
     }
 }

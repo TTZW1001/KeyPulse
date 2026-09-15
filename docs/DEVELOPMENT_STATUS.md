@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P11 (accepted)
+Current Phase: P12 (accepted)
 
 ## Completed
 
@@ -16,14 +16,14 @@ Current Phase: P11 (accepted)
 - P9 Keyboard heatmap
 - P10 Mouse page
 - P11 Trends page
+- P12 Apps stats
 
 ## Current
 
-- Ready for P12 Apps stats
+- Ready for P13 Settings
 
 ## Pending
 
-- P12 Apps stats
 - P13 Settings
 - P14 Stability
 - P15 Tests
@@ -31,7 +31,7 @@ Current Phase: P11 (accepted)
 
 ## Last Verified Commit
 
-`0ca53dc` — `feat: add trends`
+`feat: add app stats`
 
 ## Known Issues
 
@@ -41,8 +41,7 @@ Current Phase: P11 (accepted)
 - Formal `.ico` not generated yet (P16); tray uses PNG→HICON
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
-- AppCounts / app tables reserved empty until P12
-- `active_seconds` persisted as 0 until AFK/activity sampling exists
+- Hourly `active_seconds` still 0; app-level `active_seconds` is a 1 s foreground sample estimate
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Numpad Enter and main Enter share key_code `Enter`

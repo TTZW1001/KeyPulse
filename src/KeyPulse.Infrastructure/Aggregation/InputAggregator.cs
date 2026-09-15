@@ -9,6 +9,8 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
 {
     private readonly IInputCapture _capture;
     private readonly ILogger<InputAggregator> _logger;
+    private readonly IForegroundAppCache? _foreground;
+    private readonly IExcludedAppList? _exclusions;
     private readonly object _gate = new();
     private StatisticsBuffer _active = new();
     private StatisticsBuffer _flush = new();
@@ -16,11 +18,21 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
     private DateTimeOffset? _lastInputTime;
     private bool _disposed;
 
-    public InputAggregator(IInputCapture capture, ILogger<InputAggregator> logger)
+    public InputAggregator(
+        IInputCapture capture,
+        ILogger<InputAggregator> logger,
+        IForegroundAppCache? foreground = null,
+        IExcludedAppList? exclusions = null)
     {
         _capture = capture;
         _logger = logger;
+        _foreground = foreground;
+        _exclusions = exclusions;
         _capture.InputReceived += OnInputReceived;
+        if (_foreground is not null)
+        {
+            _foreground.Sampled += OnForegroundSampled;
+        }
     }
 
     public TrackingState State
@@ -69,7 +81,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
                 return;
             }
 
-            _active.Add(inputEvent);
+            _active.Add(inputEvent, CurrentAppOrNull());
             _lastInputTime = inputEvent.Timestamp;
         }
     }
@@ -129,10 +141,51 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
 
         _disposed = true;
         _capture.InputReceived -= OnInputReceived;
+        if (_foreground is not null)
+        {
+            _foreground.Sampled -= OnForegroundSampled;
+        }
     }
 
     private void OnInputReceived(object? sender, InputEvent inputEvent)
     {
         Record(inputEvent);
     }
+
+    private void OnForegroundSampled(ForegroundTick tick)
+    {
+        if (tick.App is null)
+        {
+            return;
+        }
+
+        lock (_gate)
+        {
+            if (_state != TrackingState.Running)
+            {
+                return;
+            }
+
+            if (IsExcluded(tick.App.ProcessName))
+            {
+                return;
+            }
+
+            _active.AddActive(tick.App, tick.Elapsed, tick.Timestamp);
+        }
+    }
+
+    private ForegroundApp? CurrentAppOrNull()
+    {
+        var app = _foreground?.Current;
+        if (app is null)
+        {
+            return null;
+        }
+
+        return IsExcluded(app.ProcessName) ? null : app;
+    }
+
+    private bool IsExcluded(string processName) =>
+        _exclusions is not null && _exclusions.IsExcluded(processName);
 }

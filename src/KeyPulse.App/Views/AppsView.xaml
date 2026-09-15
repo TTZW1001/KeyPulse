@@ -1,10 +1,106 @@
 <UserControl x:Class="KeyPulse.App.Views.AppsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel MaxWidth="520" HorizontalAlignment="Left">
-        <TextBlock Text="暂时还没有应用统计数据" Style="{StaticResource PlaceholderTitle}"/>
-        <TextBlock Text="继续使用电脑后，这里会自动出现。"
-                   Style="{StaticResource PlaceholderBody}"
-                   Margin="0,8,0,0"/>
-    </StackPanel>
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <RadioButton Content="今天"
+                             GroupName="AppsRange"
+                             IsChecked="{Binding IsTodayRange, Mode=TwoWay}"
+                             AutomationProperties.AutomationId="AppsToday"/>
+                <RadioButton Content="最近 7 天"
+                             GroupName="AppsRange"
+                             IsChecked="{Binding IsLast7DaysRange, Mode=TwoWay}"
+                             AutomationProperties.AutomationId="AppsLast7"/>
+            </StackPanel>
+            <TextBlock Text="按前台应用统计键鼠次数"
+                       Style="{StaticResource SecondaryText}"
+                       VerticalAlignment="Center"/>
+        </DockPanel>
+
+        <TextBlock DockPanel.Dock="Bottom"
+                   Text="{Binding ExcludedSummary}"
+                   Style="{StaticResource SecondaryText}"
+                   Margin="0,10,0,0"
+                   AutomationProperties.AutomationId="AppsExcludedSummary"/>
+
+        <Grid>
+            <StackPanel MaxWidth="520"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasRows}" Value="False">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock Text="暂时还没有应用统计数据" Style="{StaticResource PlaceholderTitle}"/>
+                <TextBlock Text="继续使用电脑后，这里会自动出现。"
+                           Style="{StaticResource PlaceholderBody}"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding Rows}"
+                      IsReadOnly="True"
+                      EnableRowVirtualization="True"
+                      RowHeight="36"
+                      Visibility="{Binding HasRows, Converter={StaticResource BoolToVis}}"
+                      AutomationProperties.AutomationId="AppsGrid">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="应用"
+                                        Binding="{Binding DisplayLabel}"
+                                        Width="*"
+                                        SortMemberPath="DisplayLabel">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="ToolTip" Value="{Binding ProcessHint}"/>
+                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="按键"
+                                        Binding="{Binding KeysText}"
+                                        Width="88"
+                                        SortMemberPath="KeyPressCount"/>
+                    <DataGridTextColumn Header="点击"
+                                        Binding="{Binding ClicksText}"
+                                        Width="88"
+                                        SortMemberPath="MouseClickCount"/>
+                    <DataGridTextColumn Header="滚轮"
+                                        Binding="{Binding WheelsText}"
+                                        Width="88"
+                                        SortMemberPath="WheelEventCount"/>
+                    <DataGridTextColumn Header="距离"
+                                        Binding="{Binding DistanceText}"
+                                        Width="96"
+                                        SortMemberPath="MouseDistancePixels"/>
+                    <DataGridTextColumn Header="活跃"
+                                        Binding="{Binding ActiveText}"
+                                        Width="80"
+                                        SortMemberPath="ActiveSeconds"/>
+                    <DataGridTemplateColumn Header="" Width="80" CanUserSort="False">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding ExcludeLabel}"
+                                        Command="{Binding DataContext.ExcludeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}"
+                                        IsEnabled="{Binding CanExclude}"
+                                        Padding="8,2"
+                                        MinHeight="24"
+                                        AutomationProperties.AutomationId="ExcludeApp"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
 </UserControl>

@@ -19,6 +19,7 @@ public sealed class AppPaths : IAppPaths
         DatabasePath = Path.Combine(DataDirectory, "keypulse.db");
         ConfigDirectory = Path.Combine(RootDirectory, "config");
         SettingsPath = Path.Combine(ConfigDirectory, "settings.json");
+        ExcludedAppsPath = Path.Combine(ConfigDirectory, "excluded-apps.json");
     }
 
     public string RootDirectory { get; }
@@ -27,4 +28,5 @@ public sealed class AppPaths : IAppPaths
     public string DatabasePath { get; }
     public string ConfigDirectory { get; }
     public string SettingsPath { get; }
+    public string ExcludedAppsPath { get; }
 }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using KeyPulse.Core.Statistics;
+using KeyPulse.Infrastructure.Input;
 using Microsoft.Data.Sqlite;
 
 namespace KeyPulse.Infrastructure.Persistence.Repositories;
@@ -44,6 +45,23 @@ public sealed class StatisticsRepository : IStatisticsRepository
             foreach (var hour in batch.HourlyCounts)
             {
                 UpsertHourly(connection, hour.Key, hour.Value);
+            }
+
+            var seenAt = DateTimeOffset.Now.ToString("o");
+            foreach (var day in batch.AppStatsByDate)
+            {
+                foreach (var app in day.Value)
+                {
+                    var processName = ProcessNameGuard.Sanitize(app.Key);
+                    if (processName is null)
+                    {
+                        continue;
+                    }
+
+                    var displayName = ProcessNameGuard.SanitizeDisplayName(app.Value.DisplayName);
+                    var appId = GetOrCreateAppId(connection, processName, displayName, seenAt);
+                    UpsertAppDay(connection, day.Key, appId, app.Value);
+                }
             }
 
             UpsertMeta(connection, "last_successful_flush", DateTimeOffset.Now.ToString("o"));
@@ -194,12 +212,47 @@ public sealed class StatisticsRepository : IStatisticsRepository
             .ToList();
     }
 
-    public Task<IReadOnlyList<DailyKeyRow>> GetAppStatsAsync(
+    public Task<IReadOnlyList<DailyAppRow>> GetAppStatsAsync(
         DateOnly from,
         DateOnly to,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<IReadOnlyList<DailyKeyRow>>(Array.Empty<DailyKeyRow>());
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT s.stat_date,
+                   a.process_name,
+                   a.display_name,
+                   s.key_press_count,
+                   s.mouse_click_count,
+                   s.wheel_event_count,
+                   s.mouse_distance_pixels,
+                   s.active_seconds
+            FROM daily_app_stats s
+            JOIN app_registry a ON a.app_id = s.app_id
+            WHERE s.stat_date BETWEEN $from AND $to
+            ORDER BY s.stat_date, a.process_name;
+            """;
+        command.Parameters.AddWithValue("$from", Format(from));
+        command.Parameters.AddWithValue("$to", Format(to));
+
+        var rows = new List<DailyAppRow>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new DailyAppRow(
+                ParseDate(reader.GetString(0)),
+                reader.GetString(1),
+                reader.IsDBNull(2) ? null : reader.GetString(2),
+                reader.GetInt64(3),
+                reader.GetInt64(4),
+                reader.GetInt64(5),
+                reader.GetDouble(6),
+                reader.GetInt64(7)));
+        }
+
+        return Task.FromResult<IReadOnlyList<DailyAppRow>>(rows);
     }
 
     public Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default)
@@ -214,6 +267,8 @@ public sealed class StatisticsRepository : IStatisticsRepository
                 SELECT stat_date FROM daily_mouse_stats
                 UNION ALL
                 SELECT stat_date FROM hourly_activity_stats
+                UNION ALL
+                SELECT stat_date FROM daily_app_stats
             );
             """;
         var value = command.ExecuteScalar();
@@ -307,6 +362,92 @@ public sealed class StatisticsRepository : IStatisticsRepository
         command.Parameters.AddWithValue("$clicks", activity.MouseClickCount);
         command.Parameters.AddWithValue("$wheels", activity.WheelEventCount);
         command.Parameters.AddWithValue("$distance", activity.MouseDistancePixels);
+        command.ExecuteNonQuery();
+    }
+
+    private static long GetOrCreateAppId(
+        SqliteConnection connection,
+        string processName,
+        string? displayName,
+        string seenAt)
+    {
+        using (var find = connection.CreateCommand())
+        {
+            find.CommandText = """
+                SELECT app_id FROM app_registry
+                WHERE process_name = $name COLLATE NOCASE;
+                """;
+            find.Parameters.AddWithValue("$name", processName);
+            var existing = find.ExecuteScalar();
+            if (existing is not null and not DBNull)
+            {
+                var id = Convert.ToInt64(existing, CultureInfo.InvariantCulture);
+                UpdateRegistry(connection, id, displayName, seenAt);
+                return id;
+            }
+        }
+
+        using var insert = connection.CreateCommand();
+        insert.CommandText = """
+            INSERT INTO app_registry (process_name, display_name, first_seen_at, last_seen_at)
+            VALUES ($name, $display, $seen, $seen);
+            SELECT last_insert_rowid();
+            """;
+        insert.Parameters.AddWithValue("$name", processName);
+        insert.Parameters.AddWithValue("$display", (object?)displayName ?? DBNull.Value);
+        insert.Parameters.AddWithValue("$seen", seenAt);
+        return Convert.ToInt64(insert.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    private static void UpdateRegistry(
+        SqliteConnection connection,
+        long appId,
+        string? displayName,
+        string seenAt)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE app_registry
+            SET last_seen_at = $seen,
+                display_name = CASE
+                    WHEN $display IS NOT NULL THEN $display
+                    ELSE display_name
+                END
+            WHERE app_id = $id;
+            """;
+        command.Parameters.AddWithValue("$seen", seenAt);
+        command.Parameters.AddWithValue("$display", (object?)displayName ?? DBNull.Value);
+        command.Parameters.AddWithValue("$id", appId);
+        command.ExecuteNonQuery();
+    }
+
+    private static void UpsertAppDay(
+        SqliteConnection connection,
+        DateOnly date,
+        long appId,
+        AppDayTotals totals)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO daily_app_stats (
+                stat_date, app_id,
+                key_press_count, mouse_click_count, wheel_event_count,
+                mouse_distance_pixels, active_seconds)
+            VALUES ($date, $app, $keys, $clicks, $wheels, $distance, $active)
+            ON CONFLICT(stat_date, app_id) DO UPDATE SET
+                key_press_count = key_press_count + excluded.key_press_count,
+                mouse_click_count = mouse_click_count + excluded.mouse_click_count,
+                wheel_event_count = wheel_event_count + excluded.wheel_event_count,
+                mouse_distance_pixels = mouse_distance_pixels + excluded.mouse_distance_pixels,
+                active_seconds = active_seconds + excluded.active_seconds;
+            """;
+        command.Parameters.AddWithValue("$date", Format(date));
+        command.Parameters.AddWithValue("$app", appId);
+        command.Parameters.AddWithValue("$keys", totals.KeyPressCount);
+        command.Parameters.AddWithValue("$clicks", totals.MouseClickCount);
+        command.Parameters.AddWithValue("$wheels", totals.WheelEventCount);
+        command.Parameters.AddWithValue("$distance", totals.MouseDistancePixels);
+        command.Parameters.AddWithValue("$active", totals.ActiveSeconds);
         command.ExecuteNonQuery();
     }
 

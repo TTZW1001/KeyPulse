@@ -30,7 +30,7 @@ public interface IStatisticsRepository
         DateOnly to,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<DailyKeyRow>> GetAppStatsAsync(
+    Task<IReadOnlyList<DailyAppRow>> GetAppStatsAsync(
         DateOnly from,
         DateOnly to,
         CancellationToken cancellationToken = default);
