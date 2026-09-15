@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P8 (accepted)
+Current Phase: P9 (implemented, pending acceptance)
 
 ## Completed
 
@@ -13,14 +13,14 @@ Current Phase: P8 (accepted)
 - P6 Tray and lifecycle
 - P7 Base UI
 - P8 Dashboard
+- P9 Keyboard heatmap
 
 ## Current
 
-- Ready for P9 Keyboard heatmap
+- Ready for P10 Mouse page
 
 ## Pending
 
-- P9 Keyboard heatmap
 - P10 Mouse page
 - P11 Trends page
 - P12 Apps stats
@@ -31,7 +31,7 @@ Current Phase: P8 (accepted)
 
 ## Last Verified Commit
 
-`f604225` — `feat: add dashboard`
+`b383dd7` — `feat: add keyboard heatmap`
 
 ## Known Issues
 
@@ -45,4 +45,4 @@ Current Phase: P8 (accepted)
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
-- DashboardQueryService wraps repository Tasks with `Task.Run` + `GetResult()`; can `await` the repo methods directly later
+- Numpad Enter and main Enter share key_code `Enter`

@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddSingleton<FlushService>();
         services.AddSingleton<IFlushService>(sp => sp.GetRequiredService<FlushService>());
         services.AddSingleton<IDashboardQuery, DashboardQueryService>();
+        services.AddSingleton<IKeyboardQuery, KeyboardQueryService>();
         return services;
     }
 }

@@ -12,6 +12,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IStatisticsAggregator _aggregator;
     private readonly IInputCapture _capture;
     private readonly DashboardViewModel _dashboard;
+    private readonly KeyboardViewModel _keyboard;
     private readonly object _dashboardPage;
     private readonly object _keyboardPage;
     private readonly object _mousePage;
@@ -32,6 +33,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _aggregator = aggregator;
         _capture = capture;
         _dashboard = dashboard;
+        _keyboard = keyboard;
         _dashboardPage = dashboard;
         _keyboardPage = keyboard;
         _mousePage = mouse;
@@ -75,6 +77,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void Refresh()
     {
         _dashboard.Refresh();
+        _keyboard.Refresh();
         var state = _aggregator.State;
         if (_capture.Error is not null)
         {
