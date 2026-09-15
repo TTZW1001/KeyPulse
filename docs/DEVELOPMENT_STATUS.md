@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P7 (implemented, pending acceptance)
+Current Phase: P7 (accepted)
 
 ## Completed
 
@@ -31,7 +31,7 @@ Current Phase: P7 (implemented, pending acceptance)
 
 ## Last Verified Commit
 
-`d6af2c1` — `feat: add base ui shell`
+`3ebc43b` — `feat: add base ui shell`
 
 ## Known Issues
 
@@ -44,5 +44,5 @@ Current Phase: P7 (implemented, pending acceptance)
 - AppCounts / app tables reserved empty until P12
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
 - Sleep/resume and logon autostart need user hand-tests
+- Dashboard today totals are Snapshot-only (reset after Flush); P8 must add persisted + unflushed
 - Tray menu still calls SQLite with `GetResult()` on the UI thread; make async in P8
-- Dashboard today totals are Snapshot-only (reset after Flush); P8 should add persisted + unflushed
