@@ -317,6 +317,22 @@ public sealed class StatisticsRepository : IStatisticsRepository
         return Task.CompletedTask;
     }
 
+    public bool TryPing()
+    {
+        try
+        {
+            using var connection = _factory.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1;";
+            command.ExecuteScalar();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static void Execute(SqliteConnection connection, string sql)
     {
         using var command = connection.CreateCommand();

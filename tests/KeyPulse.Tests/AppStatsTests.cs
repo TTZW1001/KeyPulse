@@ -428,6 +428,10 @@ public class AppStatsTests : IDisposable
 
         public event Action<ForegroundTick>? Sampled;
 
+        public void RefreshSample()
+        {
+        }
+
         public void Raise(ForegroundTick tick) => Sampled?.Invoke(tick);
     }
 

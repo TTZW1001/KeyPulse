@@ -84,7 +84,6 @@
                     <Button DockPanel.Dock="Right"
                             Content="恢复"
                             Command="{Binding ResumeCommand}"
-                            Visibility="{Binding IsPaused, Converter={StaticResource BoolToVis}}"
                             AutomationProperties.AutomationId="ResumeButton"/>
                     <TextBlock Text="{Binding StatusText}"
                                Style="{StaticResource BodyText}"

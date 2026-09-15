@@ -254,5 +254,7 @@ public class PersistenceTests : IDisposable
 
         public Task ClearStatisticsAsync(CancellationToken cancellationToken = default) =>
             throw new IOException("simulated flush failure");
+
+        public bool TryPing() => false;
     }
 }

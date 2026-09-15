@@ -17,6 +17,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<IAppPaths, AppPaths>();
         services.AddSingleton<IAppHost, AppHost>();
+        services.AddSingleton<ILifecycleRecovery, LifecycleRecovery>();
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IRunKeyStore, WindowsRunKeyStore>();
         services.AddSingleton<IStartupService, StartupService>();

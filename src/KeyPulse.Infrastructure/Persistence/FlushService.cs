@@ -22,8 +22,13 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
     private int _failures;
+    private int _writeError;
 
     public event Action? Flushed;
+
+    public event Action? WriteErrorChanged;
+
+    public bool HasWriteError => Volatile.Read(ref _writeError) != 0;
 
     public FlushService(
         IStatisticsAggregator aggregator,
@@ -41,8 +46,16 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _initializer.Initialize();
-        _logger.LogInformation("SQLite persistence started");
+        if (!TryInitialize())
+        {
+            _failures = 1;
+            SetWriteError();
+        }
+        else
+        {
+            _logger.LogInformation("SQLite persistence started");
+        }
+
         _loop = Task.Run(() => RunAsync(_cts.Token));
         return Task.CompletedTask;
     }
@@ -70,25 +83,41 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
         await _flushLock.WaitAsync(cancellationToken);
         try
         {
+            if (HasWriteError && !TryInitialize())
+            {
+                _failures++;
+                return;
+            }
+
             var batch = _aggregator.SwapForFlush();
             if (batch.IsEmpty)
             {
+                if (HasWriteError && _repository.TryPing())
+                {
+                    _failures = 0;
+                    ClearWriteError();
+                }
+
                 return;
             }
 
             try
             {
                 await _repository.FlushAsync(batch, cancellationToken);
-                _failures = 0;
-                _logger.LogInformation("Flush succeeded");
-                Flushed?.Invoke();
             }
             catch (Exception ex)
             {
                 _aggregator.Merge(batch);
                 _failures++;
+                SetWriteError();
                 _logger.LogError(ex, "Flush failed; batch merged back for retry");
+                return;
             }
+
+            _failures = 0;
+            ClearWriteError();
+            _logger.LogInformation("Flush succeeded");
+            RaiseSafely(Flushed, "Flush notification failed");
         }
         finally
         {
@@ -104,8 +133,9 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
             await _repository.ClearStatisticsAsync(cancellationToken);
             _aggregator.Clear();
             _failures = 0;
+            ClearWriteError();
             _logger.LogInformation("Statistics cleared");
-            Flushed?.Invoke();
+            RaiseSafely(Flushed, "Clear notification failed");
         }
         finally
         {
@@ -134,6 +164,56 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
         catch (OperationCanceledException)
         {
             // shutdown
+        }
+    }
+
+    private bool TryInitialize()
+    {
+        try
+        {
+            _initializer.Initialize();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Database initialize failed");
+            return false;
+        }
+    }
+
+    private void SetWriteError()
+    {
+        if (Interlocked.Exchange(ref _writeError, 1) == 0)
+        {
+            RaiseSafely(WriteErrorChanged, "Write-error notification failed");
+        }
+    }
+
+    private void ClearWriteError()
+    {
+        if (Interlocked.Exchange(ref _writeError, 0) != 0)
+        {
+            RaiseSafely(WriteErrorChanged, "Write-error notification failed");
+        }
+    }
+
+    private void RaiseSafely(Action? handlers, string message)
+    {
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (Action handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                handler();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, message);
+            }
         }
     }
 

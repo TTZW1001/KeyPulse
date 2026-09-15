@@ -7,4 +7,6 @@ public interface IForegroundAppCache
     ForegroundApp? Current { get; }
 
     event Action<ForegroundTick>? Sampled;
+
+    void RefreshSample();
 }

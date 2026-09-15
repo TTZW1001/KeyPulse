@@ -4,6 +4,7 @@ using KeyPulse.App.ViewModels;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
+using KeyPulse.Infrastructure.Persistence;
 
 namespace KeyPulse.App;
 
@@ -11,6 +12,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly IStatisticsAggregator _aggregator;
     private readonly IInputCapture _capture;
+    private readonly IFlushService _flush;
     private readonly DashboardViewModel _dashboard;
     private readonly KeyboardViewModel _keyboard;
     private readonly MouseViewModel _mouse;
@@ -27,6 +29,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IStatisticsAggregator aggregator,
         IInputCapture capture,
+        IFlushService flush,
         DashboardViewModel dashboard,
         KeyboardViewModel keyboard,
         MouseViewModel mouse,
@@ -36,6 +39,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         _aggregator = aggregator;
         _capture = capture;
+        _flush = flush;
         _dashboard = dashboard;
         _keyboard = keyboard;
         _mouse = mouse;
@@ -85,7 +89,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void Refresh()
     {
         _dashboard.Refresh();
-        _keyboard.Refresh();
+        if (SelectedItem.Page == AppPage.Keyboard)
+        {
+            _keyboard.Refresh();
+        }
+
         if (SelectedItem.Page == AppPage.Mouse)
         {
             _mouse.Refresh();
@@ -97,30 +105,50 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         var state = _aggregator.State;
-        if (_capture.Error is not null)
+        var captureDown = _capture.Error is not null ||
+                          (!_capture.IsListening && state == TrackingState.Error);
+        if (captureDown)
         {
             state = TrackingState.Error;
         }
 
         IsPaused = state == TrackingState.Paused;
-        ShowPauseBanner = state is TrackingState.Paused or TrackingState.Error;
+        var writeError = _flush.HasWriteError;
+        ShowPauseBanner = state is TrackingState.Paused or TrackingState.Error || writeError;
         StatusText = state switch
         {
-            TrackingState.Paused => "已暂停",
-            TrackingState.Error => "监听失败",
-            _ => "正在统计"
+            TrackingState.Error => StatusCopy.CaptureError,
+            TrackingState.Paused => StatusCopy.Paused,
+            _ when writeError => StatusCopy.WriteError,
+            _ => StatusCopy.Running
         };
     }
 
     [RelayCommand]
-    private void Resume()
+    private async Task Resume()
     {
-        if (_aggregator.State == TrackingState.Error)
+        if (!_capture.IsListening || _capture.Error is not null)
         {
-            return;
+            await _capture.StartAsync().ConfigureAwait(true);
+            if (_capture.IsListening && _capture.Error is null)
+            {
+                _aggregator.SetState(TrackingState.Running);
+            }
+            else
+            {
+                _aggregator.SetState(TrackingState.Error);
+            }
+        }
+        else if (_aggregator.State is TrackingState.Paused or TrackingState.Error)
+        {
+            _aggregator.SetState(TrackingState.Running);
         }
 
-        _aggregator.SetState(TrackingState.Running);
+        if (_flush.HasWriteError)
+        {
+            await _flush.FlushNowAsync().ConfigureAwait(true);
+        }
+
         Refresh();
     }
 
@@ -137,6 +165,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             AppPage.Settings => _settingsPage,
             _ => _dashboardPage
         };
+        if (value.Page == AppPage.Keyboard)
+        {
+            _keyboard.Refresh();
+        }
+
         if (value.Page == AppPage.Mouse)
         {
             _mouse.Refresh();

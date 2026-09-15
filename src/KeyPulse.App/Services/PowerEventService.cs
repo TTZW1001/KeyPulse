@@ -1,4 +1,4 @@
-using KeyPulse.Infrastructure.Persistence;
+using KeyPulse.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
@@ -6,15 +6,16 @@ namespace KeyPulse.App.Services;
 
 public sealed class PowerEventService : IDisposable
 {
-    private readonly IFlushService _flush;
+    private readonly ILifecycleRecovery _recovery;
     private readonly ILogger<PowerEventService> _logger;
     private bool _disposed;
 
-    public PowerEventService(IFlushService flush, ILogger<PowerEventService> logger)
+    public PowerEventService(ILifecycleRecovery recovery, ILogger<PowerEventService> logger)
     {
-        _flush = flush;
+        _recovery = recovery;
         _logger = logger;
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        SystemEvents.SessionEnding += OnSessionEnding;
     }
 
     public void Dispose()
@@ -26,25 +27,35 @@ public sealed class PowerEventService : IDisposable
 
         _disposed = true;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.SessionEnding -= OnSessionEnding;
     }
 
     private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
     {
         if (e.Mode == PowerModes.Suspend)
         {
-            _logger.LogInformation("Power suspend: flushing");
-            try
-            {
-                _flush.FlushNowAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Flush on suspend failed");
-            }
+            RunQuietly(() => _recovery.OnSuspendAsync());
         }
         else if (e.Mode == PowerModes.Resume)
         {
-            _logger.LogInformation("Power resume: capture and flush timer should still be running");
+            RunQuietly(() => _recovery.OnResumeAsync());
+        }
+    }
+
+    private void OnSessionEnding(object sender, SessionEndingEventArgs e)
+    {
+        RunQuietly(() => _recovery.OnSessionEndingAsync());
+    }
+
+    private void RunQuietly(Func<Task> action)
+    {
+        try
+        {
+            action().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lifecycle callback failed");
         }
     }
 }

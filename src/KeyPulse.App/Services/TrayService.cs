@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Windows.Forms;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
+using KeyPulse.Infrastructure.System;
 using Microsoft.Extensions.Logging;
 
 namespace KeyPulse.App.Services;
@@ -22,6 +23,8 @@ public sealed class TrayService : IDisposable
     private readonly ToolStripMenuItem _pauseItem;
     private readonly ToolStripMenuItem _startupItem;
     private readonly SynchronizationContext? _ui;
+    private readonly TaskbarCreatedRouter _taskbar;
+    private readonly TaskbarCreatedWindow _taskbarWindow;
     private int _refreshing;
     private bool _disposed;
 
@@ -74,6 +77,10 @@ public sealed class TrayService : IDisposable
         _notifyIcon.DoubleClick += (_, _) => _lifecycle.ShowMainWindow();
         ApplyState(_aggregator.State, 0, 0);
         _ = RefreshMenuAsync();
+
+        _taskbar = new TaskbarCreatedRouter(TaskbarCreatedWindow.NativeMessageId);
+        _taskbar.RecreateRequested += RecreateIcon;
+        _taskbarWindow = new TaskbarCreatedWindow(_taskbar);
         _logger.LogInformation("Tray icon created");
     }
 
@@ -85,10 +92,24 @@ public sealed class TrayService : IDisposable
         }
 
         _disposed = true;
+        _taskbar.RecreateRequested -= RecreateIcon;
+        _taskbarWindow.Dispose();
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _colorIcon.Dispose();
         _pausedIcon.Dispose();
+    }
+
+    public void RecreateIcon()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _notifyIcon.Visible = false;
+        _notifyIcon.Visible = true;
+        _logger.LogInformation("Tray icon restored");
     }
 
     private void TogglePause()

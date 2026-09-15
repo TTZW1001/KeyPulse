@@ -19,7 +19,8 @@ public sealed class RawInputService : IInputCapture, IDisposable
     private IntPtr _buffer = IntPtr.Zero;
     private uint _bufferSize;
     private bool _disposed;
-    private bool _started;
+    private volatile bool _isListening;
+    private volatile string? _error;
 
     public RawInputService(
         ILogger<RawInputService> logger,
@@ -33,9 +34,9 @@ public sealed class RawInputService : IInputCapture, IDisposable
 
     public event EventHandler<InputEvent>? InputReceived;
 
-    public bool IsListening { get; private set; }
+    public bool IsListening => _isListening;
 
-    public string? Error { get; private set; }
+    public string? Error => _error;
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -46,7 +47,12 @@ public sealed class RawInputService : IInputCapture, IDisposable
                 return Task.CompletedTask;
             }
 
-            Error = null;
+            if (_thread is not null || _window is not null)
+            {
+                StopCore();
+            }
+
+            _error = null;
             using var ready = new ManualResetEventSlim(false);
             Exception? startError = null;
 
@@ -64,19 +70,18 @@ public sealed class RawInputService : IInputCapture, IDisposable
                     {
                         startError = new InvalidOperationException(
                             "RegisterRawInputDevices failed. Win32=" + Marshal.GetLastWin32Error());
-                        Error = startError.Message;
+                        _error = startError.Message;
                         window.Dispose();
                         _window = null;
                         return;
                     }
 
-                    IsListening = true;
-                    _started = true;
+                    _isListening = true;
                 }
                 catch (Exception ex)
                 {
                     startError = ex;
-                    Error = ex.Message;
+                    _error = ex.Message;
                     window?.Dispose();
                     _window = null;
                 }
@@ -87,7 +92,20 @@ public sealed class RawInputService : IInputCapture, IDisposable
 
                 if (Error is null && window is not null)
                 {
-                    window.RunMessageLoop();
+                    try
+                    {
+                        window.RunMessageLoop();
+                    }
+                    finally
+                    {
+                        _isListening = false;
+                        window.RawInputReceived -= OnRawInput;
+                        window.Dispose();
+                        if (ReferenceEquals(_window, window))
+                        {
+                            _window = null;
+                        }
+                    }
                 }
             })
             {
@@ -99,7 +117,7 @@ public sealed class RawInputService : IInputCapture, IDisposable
 
             if (!ready.Wait(TimeSpan.FromSeconds(5), cancellationToken))
             {
-                Error = "Raw Input thread did not start in time.";
+                _error = "Raw Input thread did not start in time.";
                 _logger.LogError("Raw Input listener failed to start: {Error}", Error);
                 return Task.CompletedTask;
             }
@@ -140,7 +158,7 @@ public sealed class RawInputService : IInputCapture, IDisposable
 
     private void StopCore()
     {
-        if (!_started && _window is null)
+        if (_thread is null && _window is null)
         {
             return;
         }
@@ -160,8 +178,7 @@ public sealed class RawInputService : IInputCapture, IDisposable
         _thread = null;
         _window?.Dispose();
         _window = null;
-        IsListening = false;
-        _started = false;
+        _isListening = false;
 
         if (_buffer != IntPtr.Zero)
         {

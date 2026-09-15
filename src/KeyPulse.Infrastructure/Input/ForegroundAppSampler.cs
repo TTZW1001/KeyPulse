@@ -14,6 +14,7 @@ public sealed class ForegroundAppSampler : IForegroundAppCache, IHostedService, 
     private readonly IClock _clock;
     private readonly ILogger<ForegroundAppSampler> _logger;
     private readonly object _gate = new();
+    private readonly object _loopGate = new();
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
     private ForegroundApp? _current;
@@ -44,10 +45,21 @@ public sealed class ForegroundAppSampler : IForegroundAppCache, IHostedService, 
 
     public event Action<ForegroundTick>? Sampled;
 
+    public void RefreshSample()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
+        EnsureLoop();
+        SampleOnce();
+    }
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         SampleOnce();
-        _loop = Task.Run(() => RunAsync(_cts.Token));
+        EnsureLoop();
         return Task.CompletedTask;
     }
 
@@ -108,6 +120,37 @@ public sealed class ForegroundAppSampler : IForegroundAppCache, IHostedService, 
 
         _cts.Cancel();
         _cts.Dispose();
+    }
+
+    private void EnsureLoop()
+    {
+        if (Volatile.Read(ref _disposed) != 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_cts.IsCancellationRequested)
+            {
+                return;
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
+        lock (_loopGate)
+        {
+            var loop = _loop;
+            if (loop is { IsCompleted: false })
+            {
+                return;
+            }
+
+            _loop = Task.Run(() => RunAsync(_cts.Token));
+        }
     }
 
     private async Task RunAsync(CancellationToken cancellationToken)
