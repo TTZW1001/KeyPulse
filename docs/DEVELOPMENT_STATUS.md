@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P3 (accepted, IME hand-test still open)
+Current Phase: P4 (self-test complete)
 
 ## Completed
 
@@ -8,14 +8,14 @@ Current Phase: P3 (accepted, IME hand-test still open)
 - P1 Technical Spike
 - P2 Project skeleton
 - P3 Input capture
+- P4 Aggregation
 
 ## Current
 
-- Ready for P4 Aggregation
+- Ready for P5 SQLite persistence after total-control acceptance
 
 ## Pending
 
-- P4 Aggregation
 - P5 SQLite persistence
 - P6 Tray and lifecycle
 - P7 Base UI
@@ -31,7 +31,7 @@ Current Phase: P3 (accepted, IME hand-test still open)
 
 ## Last Verified Commit
 
-`aad95a5` — `feat: implement raw input capture`
+P4 `feat: add statistics aggregation`
 
 ## Known Issues
 
@@ -41,8 +41,6 @@ Current Phase: P3 (accepted, IME hand-test still open)
 - PRD lists dark mode as a V1.1 candidate; UI / architecture treat Light/Dark/System as V1.0. Resolve before P7
 - Formal `.ico` not generated yet (P16)
 - WPF working set is still ~200 MB at idle; watch in P14
-- Microsoft Pinyin not user-tested; do it during/before P4 if possible, required before calling input “complete”
-- Live wheel was thin in short runs; parser tests cover direction
-- Synthetic SendInput (even scan-code) is an unreliable Raw Input source; accept hardware tests only
-- `RawInputService` stop can log twice if Dispose races with StopAsync; tidy in P6
-- `DebugInputCounters` lives in App; P4 should replace it with Infrastructure aggregation
+- Microsoft Pinyin still not user-tested
+- AppCounts reserved empty until P12
+- P4 does not persist; a process restart loses unflushed counts (expected until P5)

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using KeyPulse.Core.Interfaces;
+using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure;
 using KeyPulse.Infrastructure.Logging;
 using KeyPulse.Infrastructure.System;
@@ -31,7 +32,6 @@ public partial class App : Application
                 .ConfigureServices(services =>
                 {
                     services.AddKeyPulseInfrastructure();
-                    services.AddSingleton<DebugInputCounters>();
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<MainWindow>();
                 })
@@ -39,7 +39,13 @@ public partial class App : Application
 
             await _host.StartAsync();
             await _host.Services.GetRequiredService<IAppHost>().StartAsync();
-            await _host.Services.GetRequiredService<IInputCapture>().StartAsync();
+            var capture = _host.Services.GetRequiredService<IInputCapture>();
+            await capture.StartAsync();
+            if (capture.Error is not null)
+            {
+                _host.Services.GetRequiredService<IStatisticsAggregator>()
+                    .SetState(TrackingState.Error);
+            }
 
             var window = _host.Services.GetRequiredService<MainWindow>();
             window.Show();

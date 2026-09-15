@@ -1,4 +1,5 @@
 using KeyPulse.Core.Interfaces;
+using KeyPulse.Infrastructure.Aggregation;
 using KeyPulse.Infrastructure.Hosting;
 using KeyPulse.Infrastructure.Input;
 using KeyPulse.Infrastructure.System;
@@ -15,6 +16,9 @@ public static class DependencyInjection
         services.AddSingleton<RawKeyboardParser>();
         services.AddSingleton<RawMouseParser>();
         services.AddSingleton<IInputCapture, RawInputService>();
+        services.AddSingleton<InputAggregator>();
+        services.AddSingleton<IStatisticsAggregator>(sp => sp.GetRequiredService<InputAggregator>());
+        services.AddSingleton<IStatisticsReader>(sp => sp.GetRequiredService<InputAggregator>());
         return services;
     }
 }
