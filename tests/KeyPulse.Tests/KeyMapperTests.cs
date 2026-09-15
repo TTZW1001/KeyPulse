@@ -55,4 +55,17 @@ public class KeyMapperTests
     {
         Assert.Equal("Space", KeyMapper.MapScanCode(0x39, 0).Name);
     }
+
+    [Theory]
+    [InlineData(0x47, 0, "NumPad7")]
+    [InlineData(0x47, 0x02, "Home")]
+    [InlineData(0x35, 0, "Oem2")]
+    [InlineData(0x35, 0x02, "NumPadDivide")]
+    public void MapScanCode_DistinguishesExtendedNavigationKeys(
+        ushort makeCode,
+        ushort flags,
+        string expected)
+    {
+        Assert.Equal(expected, KeyMapper.MapScanCode(makeCode, flags).Name);
+    }
 }

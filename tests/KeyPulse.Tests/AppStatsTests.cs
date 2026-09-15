@@ -287,7 +287,7 @@ public class AppStatsTests : IDisposable
     }
 
     [Fact]
-    public void Source_DoesNotCallGetWindowText()
+    public void Source_DoesNotUsePrivacySensitiveTextApis()
     {
         var src = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src"));
         Assert.True(Directory.Exists(src), src);
@@ -304,7 +304,9 @@ public class AppStatsTests : IDisposable
             if (text.Contains("GetWindowText", StringComparison.Ordinal) ||
                 text.Contains("GetWindowTextLength", StringComparison.Ordinal) ||
                 text.Contains("MainWindowTitle", StringComparison.Ordinal) ||
-                text.Contains("System.Windows.Automation", StringComparison.Ordinal))
+                text.Contains("System.Windows.Automation", StringComparison.Ordinal) ||
+                text.Contains("ToUnicode(", StringComparison.Ordinal) ||
+                text.Contains("ToUnicodeEx(", StringComparison.Ordinal))
             {
                 hits.Add(Path.GetRelativePath(src, file));
             }
