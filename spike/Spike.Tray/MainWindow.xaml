@@ -1,0 +1,17 @@
+<Window x:Class="Spike.Tray.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KeyPulse Spike Tray"
+        Width="480" Height="260"
+        Background="#F7F7F5">
+    <StackPanel Margin="20">
+        <TextBlock FontSize="18" FontWeight="SemiBold" Text="Tray Spike"/>
+        <TextBlock Margin="0,8,0,16" Foreground="#707070" TextWrapping="Wrap"
+                   Text="Closing the window hides to tray. Right-click the tray icon for Open / Exit. Double-click opens the window. Exit from the menu actually shuts down the process."/>
+        <TextBlock x:Name="StatusText" Margin="0,0,0,16"/>
+        <StackPanel Orientation="Horizontal">
+            <Button Content="Hide to tray" Width="120" Margin="0,0,8,0" Click="HideButton_OnClick"/>
+            <Button Content="Exit" Width="88" Click="ExitButton_OnClick"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -1,0 +1,25 @@
+<Window x:Class="Spike.Input.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="KeyPulse Spike Input"
+        Width="720" Height="640"
+        MinWidth="560" MinHeight="420"
+        Background="#F7F7F5">
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock FontSize="18" FontWeight="SemiBold" Text="Raw Input Spike"/>
+            <TextBlock Margin="0,4,0,12" Foreground="#707070"
+                       Text="Counts only. No text, no key sequence, no ToUnicode, no IME composition."/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <Button x:Name="PauseButton" Content="Pause" Width="88" Margin="0,0,8,0" Click="PauseButton_OnClick"/>
+                <TextBlock x:Name="StatusText" VerticalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
+        <ScrollViewer>
+            <TextBlock x:Name="StatsText"
+                       FontFamily="Consolas"
+                       FontSize="13"
+                       TextWrapping="Wrap"/>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
