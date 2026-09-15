@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P6 (self-test complete)
+Current Phase: P6 (accepted)
 
 ## Completed
 
@@ -14,7 +14,7 @@ Current Phase: P6 (self-test complete)
 
 ## Current
 
-- Ready for P7 Base UI after total-control acceptance
+- Ready for P7 Base UI
 
 ## Pending
 
@@ -31,18 +31,19 @@ Current Phase: P6 (self-test complete)
 
 ## Last Verified Commit
 
-P6 `feat: add tray lifecycle`
+`eb29673` — `feat: add tray lifecycle`
 
 ## Known Issues
 
 - Inno Setup not installed (P16)
 - DB Browser for SQLite not installed (optional)
 - `global.json` pins SDK 8.0.425 (`rollForward: latestFeature`)
-- PRD lists dark mode as a V1.1 candidate; UI / architecture treat Light/Dark/System as V1.0. Resolve before P7
 - Formal `.ico` not generated yet (P16); tray uses PNG→HICON
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
 - AppCounts / app tables reserved empty until P12
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
 - Sleep/resume and logon autostart need user hand-tests
-- Debug UI is still the P5 skeleton, not a product shell
+- Debug UI is still the P5 skeleton; P7 replaces it with the product shell
+- Tray menu and Debug UI still call SQLite with `GetResult()` on the UI thread; make async in P8
+- Light/Dark: follow UI + architecture + implementation plan in P7 (PRD listed it as V1.1)
