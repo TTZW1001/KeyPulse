@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Windows.Forms;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
-using KeyPulse.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
 namespace KeyPulse.App.Services;
@@ -11,9 +10,8 @@ namespace KeyPulse.App.Services;
 public sealed class TrayService : IDisposable
 {
     private readonly IApplicationLifecycle _lifecycle;
-    private readonly IStatisticsReader _reader;
+    private readonly IDashboardQuery _dashboard;
     private readonly IStatisticsAggregator _aggregator;
-    private readonly IStatisticsRepository _repository;
     private readonly IStartupService _startup;
     private readonly ILogger<TrayService> _logger;
     private readonly Icon _colorIcon;
@@ -23,22 +21,23 @@ public sealed class TrayService : IDisposable
     private readonly ToolStripMenuItem _clicksItem;
     private readonly ToolStripMenuItem _pauseItem;
     private readonly ToolStripMenuItem _startupItem;
+    private readonly SynchronizationContext? _ui;
+    private int _refreshing;
     private bool _disposed;
 
     public TrayService(
         IApplicationLifecycle lifecycle,
-        IStatisticsReader reader,
+        IDashboardQuery dashboard,
         IStatisticsAggregator aggregator,
-        IStatisticsRepository repository,
         IStartupService startup,
         ILogger<TrayService> logger)
     {
         _lifecycle = lifecycle;
-        _reader = reader;
+        _dashboard = dashboard;
         _aggregator = aggregator;
-        _repository = repository;
         _startup = startup;
         _logger = logger;
+        _ui = SynchronizationContext.Current;
 
         var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "tray-icon.png");
         _colorIcon = TrayIconLoader.Load(iconPath, grayscale: false);
@@ -63,7 +62,7 @@ public sealed class TrayService : IDisposable
         menu.Items.Add("设置", null, (_, _) => _lifecycle.ShowSettings());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("退出", null, (_, _) => _lifecycle.RequestExit());
-        menu.Opening += (_, _) => RefreshMenu();
+        menu.Opening += (_, _) => _ = RefreshMenuAsync();
 
         _notifyIcon = new NotifyIcon
         {
@@ -73,7 +72,8 @@ public sealed class TrayService : IDisposable
             ContextMenuStrip = menu
         };
         _notifyIcon.DoubleClick += (_, _) => _lifecycle.ShowMainWindow();
-        RefreshMenu();
+        ApplyState(_aggregator.State, 0, 0);
+        _ = RefreshMenuAsync();
         _logger.LogInformation("Tray icon created");
     }
 
@@ -102,7 +102,7 @@ public sealed class TrayService : IDisposable
             _aggregator.State == TrackingState.Paused
                 ? TrackingState.Running
                 : TrackingState.Paused);
-        RefreshMenu();
+        _ = RefreshMenuAsync();
     }
 
     private void ToggleStartup()
@@ -117,40 +117,54 @@ public sealed class TrayService : IDisposable
         }
     }
 
-    private void RefreshMenu()
+    private async Task RefreshMenuAsync()
     {
-        var state = _aggregator.State;
-        var (keys, clicks) = ReadTodayTotals();
-        _keysItem.Text = "今日：" + keys.ToString("N0", CultureInfo.CurrentCulture) + " 次按键";
-        _clicksItem.Text = "      " + clicks.ToString("N0", CultureInfo.CurrentCulture) + " 次点击";
+        if (Interlocked.Exchange(ref _refreshing, 1) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            var today = await _dashboard.GetTodayAsync().ConfigureAwait(false);
+            Post(() => ApplyState(_aggregator.State, today.KeyPressCount, today.MouseClickCount));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read tray totals");
+            Post(() => ApplyState(_aggregator.State, 0, 0));
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _refreshing, 0);
+        }
+    }
+
+    private void ApplyState(TrackingState state, long keys, long clicks)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var culture = CultureInfo.CurrentCulture;
+        _keysItem.Text = "今日：" + keys.ToString("N0", culture) + " 次按键";
+        _clicksItem.Text = "      " + clicks.ToString("N0", culture) + " 次点击";
         _pauseItem.Text = state == TrackingState.Paused ? "恢复统计" : "暂停统计";
         _startupItem.Checked = _startup.IsEnabled;
         _notifyIcon.Text = TooltipFor(state);
         _notifyIcon.Icon = state == TrackingState.Paused ? _pausedIcon : _colorIcon;
     }
 
-    private (long Keys, long Clicks) ReadTodayTotals()
+    private void Post(Action action)
     {
-        var snap = _reader.CaptureSnapshot();
-        var memoryKeys = snap.KeyCounts.Values.Sum();
-        var memoryClicks = snap.Mouse.Left + snap.Mouse.Right + snap.Mouse.Middle +
-                           snap.Mouse.XButton1 + snap.Mouse.XButton2;
-        try
+        if (_ui is null)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            var persistedKeys = _repository.GetKeyStatsAsync(today, today).GetAwaiter().GetResult()
-                .Sum(row => row.PressCount);
-            var mouseRows = _repository.GetMouseStatsAsync(today, today).GetAwaiter().GetResult();
-            var persistedClicks = mouseRows.Sum(row =>
-                row.Mouse.Left + row.Mouse.Right + row.Mouse.Middle +
-                row.Mouse.XButton1 + row.Mouse.XButton2);
-            return (memoryKeys + persistedKeys, memoryClicks + persistedClicks);
+            action();
+            return;
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to read persisted totals for tray");
-            return (memoryKeys, memoryClicks);
-        }
+
+        _ui.Post(_ => action(), null);
     }
 
     private static string TooltipFor(TrackingState state) =>

@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P7 (accepted)
+Current Phase: P8 (implemented, pending acceptance)
 
 ## Completed
 
@@ -12,14 +12,14 @@ Current Phase: P7 (accepted)
 - P5 SQLite persistence
 - P6 Tray and lifecycle
 - P7 Base UI
+- P8 Dashboard
 
 ## Current
 
-- Ready for P8 Dashboard
+- Ready for P9 Keyboard heatmap
 
 ## Pending
 
-- P8 Dashboard
 - P9 Keyboard heatmap
 - P10 Mouse page
 - P11 Trends page
@@ -31,7 +31,7 @@ Current Phase: P7 (accepted)
 
 ## Last Verified Commit
 
-`3ebc43b` — `feat: add base ui shell`
+`aa78720` — `feat: add dashboard`
 
 ## Known Issues
 
@@ -44,5 +44,4 @@ Current Phase: P7 (accepted)
 - AppCounts / app tables reserved empty until P12
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
 - Sleep/resume and logon autostart need user hand-tests
-- Dashboard today totals are Snapshot-only (reset after Flush); P8 must add persisted + unflushed
-- Tray menu still calls SQLite with `GetResult()` on the UI thread; make async in P8
+- LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)

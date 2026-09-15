@@ -4,6 +4,7 @@ using KeyPulse.Infrastructure.Hosting;
 using KeyPulse.Infrastructure.Input;
 using KeyPulse.Infrastructure.Persistence;
 using KeyPulse.Infrastructure.Persistence.Repositories;
+using KeyPulse.Infrastructure.Query;
 using KeyPulse.Infrastructure.System;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddSingleton<IStatisticsRepository, StatisticsRepository>();
         services.AddSingleton<FlushService>();
         services.AddSingleton<IFlushService>(sp => sp.GetRequiredService<FlushService>());
+        services.AddSingleton<IDashboardQuery, DashboardQueryService>();
         return services;
     }
 }

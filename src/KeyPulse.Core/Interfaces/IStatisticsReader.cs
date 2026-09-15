@@ -7,4 +7,6 @@ public interface IStatisticsReader
     TrackingState State { get; }
 
     StatisticsSnapshot CaptureSnapshot();
+
+    StatisticsBatch CaptureUnflushed();
 }

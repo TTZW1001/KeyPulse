@@ -83,6 +83,15 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
         }
     }
 
+    public StatisticsBatch CaptureUnflushed()
+    {
+        lock (_gate)
+        {
+            var batch = _active.ToBatch();
+            return batch with { LastInputTime = _lastInputTime ?? batch.LastInputTime };
+        }
+    }
+
     public StatisticsBatch SwapForFlush()
     {
         lock (_gate)

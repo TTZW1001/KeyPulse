@@ -23,6 +23,8 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
     private Task? _loop;
     private int _failures;
 
+    public event Action? Flushed;
+
     public FlushService(
         IStatisticsAggregator aggregator,
         IStatisticsRepository repository,
@@ -79,6 +81,7 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
                 await _repository.FlushAsync(batch, cancellationToken);
                 _failures = 0;
                 _logger.LogInformation("Flush succeeded");
+                Flushed?.Invoke();
             }
             catch (Exception ex)
             {

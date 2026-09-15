@@ -23,6 +23,7 @@ release/
 
 # Local environment test
 _env_test/
+.nuget-feed/
 
 # SQLite
 *.db
