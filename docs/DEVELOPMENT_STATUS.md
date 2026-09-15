@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P3 (self-test complete)
+Current Phase: P3 (accepted, IME hand-test still open)
 
 ## Completed
 
@@ -11,8 +11,7 @@ Current Phase: P3 (self-test complete)
 
 ## Current
 
-- Ready for P4 Aggregation after total-control acceptance
-- User still needs to hand-test Microsoft Pinyin (and optional fullscreen / live wheel)
+- Ready for P4 Aggregation
 
 ## Pending
 
@@ -32,7 +31,7 @@ Current Phase: P3 (self-test complete)
 
 ## Last Verified Commit
 
-P3 `feat: implement raw input capture`
+`aad95a5` — `feat: implement raw input capture`
 
 ## Known Issues
 
@@ -42,5 +41,8 @@ P3 `feat: implement raw input capture`
 - PRD lists dark mode as a V1.1 candidate; UI / architecture treat Light/Dark/System as V1.0. Resolve before P7
 - Formal `.ico` not generated yet (P16)
 - WPF working set is still ~200 MB at idle; watch in P14
-- Microsoft Pinyin not agent-tested; must be user-tested before treating P3 as fully accepted
-- Live wheel was not observed in the short agent run; parser unit tests cover direction
+- Microsoft Pinyin not user-tested; do it during/before P4 if possible, required before calling input “complete”
+- Live wheel was thin in short runs; parser tests cover direction
+- Synthetic SendInput (even scan-code) is an unreliable Raw Input source; accept hardware tests only
+- `RawInputService` stop can log twice if Dispose races with StopAsync; tidy in P6
+- `DebugInputCounters` lives in App; P4 should replace it with Infrastructure aggregation
