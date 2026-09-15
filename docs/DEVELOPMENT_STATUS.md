@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P5 (self-test complete)
+Current Phase: P5 (accepted)
 
 ## Completed
 
@@ -13,7 +13,7 @@ Current Phase: P5 (self-test complete)
 
 ## Current
 
-- Ready for P6 Tray and lifecycle after total-control acceptance
+- Ready for P6 Tray and lifecycle
 
 ## Pending
 
@@ -31,7 +31,7 @@ Current Phase: P5 (self-test complete)
 
 ## Last Verified Commit
 
-P5 `feat: add sqlite persistence`
+`493c338` — `feat: add sqlite persistence`
 
 ## Known Issues
 
@@ -44,4 +44,5 @@ P5 `feat: add sqlite persistence`
 - Microsoft Pinyin still not user-tested
 - AppCounts / app tables reserved empty until P12
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
-- Debug UI still shows unflushed memory snapshot; persisted today total is a side line, not a Dashboard
+- Debug UI still shows unflushed memory snapshot plus a persisted-today line; not a Dashboard
+- MainWindowViewModel blocks the UI thread with `GetResult()` every 5s to read SQLite; make this async in P8
