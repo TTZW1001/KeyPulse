@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P8 (implemented, pending acceptance)
+Current Phase: P8 (accepted)
 
 ## Completed
 
@@ -31,7 +31,7 @@ Current Phase: P8 (implemented, pending acceptance)
 
 ## Last Verified Commit
 
-`aa78720` — `feat: add dashboard`
+`f604225` — `feat: add dashboard`
 
 ## Known Issues
 
@@ -45,3 +45,4 @@ Current Phase: P8 (implemented, pending acceptance)
 - `active_seconds` persisted as 0 until AFK/activity sampling exists
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
+- DashboardQueryService wraps repository Tasks with `Task.Run` + `GetResult()`; can `await` the repo methods directly later
