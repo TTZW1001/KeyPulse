@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P15 (accepted)
+Current Phase: P16 (accepted) — V1.0 complete
 
 ## Completed
 
@@ -20,21 +20,17 @@ Current Phase: P15 (accepted)
 - P13 Settings
 - P14 Stability
 - P15 Tests
-
-## Pending
-
 - P16 Packaging
 
 ## Last Verified Commit
 
-`576c9e3` — `test: expand coverage`
+`7c450c3` — `chore: add installer and readme`
 
 ## Known Issues
 
-- Inno Setup not installed (P16)
 - DB Browser for SQLite not installed (optional)
 - `global.json` pins SDK 8.0.425 (`rollForward: latestFeature`)
-- Formal `.ico` not generated yet (P16); tray uses PNG→HICON
+- Release artifacts are unsigned; SmartScreen may warn
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
 - Hourly `active_seconds` still 0; app-level `active_seconds` is a 1 s foreground sample estimate
