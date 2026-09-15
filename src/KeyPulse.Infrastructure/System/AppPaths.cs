@@ -17,10 +17,14 @@ public sealed class AppPaths : IAppPaths
         LogsDirectory = Path.Combine(RootDirectory, "logs");
         DataDirectory = Path.Combine(RootDirectory, "data");
         DatabasePath = Path.Combine(DataDirectory, "keypulse.db");
+        ConfigDirectory = Path.Combine(RootDirectory, "config");
+        SettingsPath = Path.Combine(ConfigDirectory, "settings.json");
     }
 
     public string RootDirectory { get; }
     public string LogsDirectory { get; }
     public string DataDirectory { get; }
     public string DatabasePath { get; }
+    public string ConfigDirectory { get; }
+    public string SettingsPath { get; }
 }

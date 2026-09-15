@@ -38,6 +38,8 @@ public class InfrastructureSmokeTests
         Assert.Equal(Path.Combine(expectedRoot, "logs"), paths.LogsDirectory);
         Assert.Equal(Path.Combine(expectedRoot, "data"), paths.DataDirectory);
         Assert.Equal(Path.Combine(expectedRoot, "data", "keypulse.db"), paths.DatabasePath);
+        Assert.Equal(Path.Combine(expectedRoot, "config"), paths.ConfigDirectory);
+        Assert.Equal(Path.Combine(expectedRoot, "config", "settings.json"), paths.SettingsPath);
     }
 
     [Fact]

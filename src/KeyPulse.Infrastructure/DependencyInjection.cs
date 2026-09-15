@@ -15,6 +15,9 @@ public static class DependencyInjection
     {
         services.AddSingleton<IAppPaths, AppPaths>();
         services.AddSingleton<IAppHost, AppHost>();
+        services.AddSingleton<IRunKeyStore, WindowsRunKeyStore>();
+        services.AddSingleton<IStartupService, StartupService>();
+        services.AddSingleton<IUserSettings, JsonUserSettings>();
         services.AddSingleton<RawKeyboardParser>();
         services.AddSingleton<RawMouseParser>();
         services.AddSingleton<IInputCapture, RawInputService>();

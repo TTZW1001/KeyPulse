@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
+using KeyPulse.App.Services;
+using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure;
@@ -12,28 +14,50 @@ using Serilog;
 
 namespace KeyPulse.App;
 
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private IHost? _host;
+    private ISingleInstanceService? _singleInstance;
+    private TrayService? _tray;
+    private ApplicationLifecycleService? _lifecycle;
+    private PowerEventService? _power;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
         base.OnStartup(e);
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+
+        _singleInstance = new SingleInstanceService();
+        if (!_singleInstance.TryAcquire())
+        {
+            _singleInstance.SignalShowWindow();
+            _singleInstance.Dispose();
+            _singleInstance = null;
+            Shutdown();
+            return;
+        }
 
         var paths = new AppPaths();
         Log.Logger = SerilogSetup.Create(paths.LogsDirectory).CreateLogger();
 
         try
         {
+            System.Windows.Forms.Application.EnableVisualStyles();
+
             _host = Host.CreateDefaultBuilder()
                 .UseContentRoot(AppContext.BaseDirectory)
                 .UseSerilog()
                 .ConfigureServices(services =>
                 {
+                    services.AddSingleton(_singleInstance);
                     services.AddKeyPulseInfrastructure();
                     services.AddHostedService(sp => sp.GetRequiredService<FlushService>());
+                    services.AddSingleton<ApplicationLifecycleService>();
+                    services.AddSingleton<IApplicationLifecycle>(sp => sp.GetRequiredService<ApplicationLifecycleService>());
+                    services.AddSingleton<TrayService>();
+                    services.AddSingleton<PowerEventService>();
                     services.AddSingleton<MainWindowViewModel>();
                     services.AddSingleton<MainWindow>();
                 })
@@ -51,7 +75,16 @@ public partial class App : Application
             }
 
             var window = _host.Services.GetRequiredService<MainWindow>();
-            window.Show();
+            _lifecycle = _host.Services.GetRequiredService<ApplicationLifecycleService>();
+            _lifecycle.Attach(window);
+            _tray = _host.Services.GetRequiredService<TrayService>();
+            _power = _host.Services.GetRequiredService<PowerEventService>();
+            _singleInstance.StartShowListener(() => Dispatcher.Invoke(() => _lifecycle.ShowMainWindow()));
+
+            if (!LaunchArguments.IsSilentStartup(e.Args))
+            {
+                window.Show();
+            }
         }
         catch (Exception ex)
         {
@@ -71,11 +104,15 @@ public partial class App : Application
                 await _host.Services.GetRequiredService<IFlushService>().FlushNowAsync();
                 await _host.Services.GetRequiredService<IAppHost>().StopAsync();
                 await _host.StopAsync(TimeSpan.FromSeconds(5));
+                _tray?.Dispose();
+                _power?.Dispose();
+                _lifecycle?.Dispose();
                 _host.Dispose();
             }
         }
         finally
         {
+            _singleInstance?.Dispose();
             Log.CloseAndFlush();
             base.OnExit(e);
         }

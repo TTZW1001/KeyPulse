@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>KeyPulse.App</RootNamespace>
     <AssemblyName>KeyPulse</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -28,5 +29,6 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="..\..\assets\logo.png" Link="Assets\logo.png" />
+    <None Include="..\..\assets\tray-icon.png" Link="tray-icon.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
