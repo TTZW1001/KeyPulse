@@ -31,7 +31,7 @@ Current Phase: P13 (accepted)
 
 ## Last Verified Commit
 
-`feat: add settings`
+`032b52a` — `feat: add settings`
 
 ## Known Issues
 
