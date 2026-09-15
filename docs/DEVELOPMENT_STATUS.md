@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P14 (accepted)
+Current Phase: P15 (accepted)
 
 ## Completed
 
@@ -19,15 +19,15 @@ Current Phase: P14 (accepted)
 - P12 Apps stats
 - P13 Settings
 - P14 Stability
+- P15 Tests
 
 ## Pending
 
-- P15 Tests
 - P16 Packaging
 
 ## Last Verified Commit
 
-`ff6421c` — `fix: harden lifecycle recovery`
+`576c9e3` — `test: expand coverage`
 
 ## Known Issues
 
