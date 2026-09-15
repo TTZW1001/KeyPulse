@@ -202,6 +202,35 @@ public sealed class StatisticsRepository : IStatisticsRepository
         return Task.FromResult<IReadOnlyList<DailyKeyRow>>(Array.Empty<DailyKeyRow>());
     }
 
+    public Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT MIN(stat_date) FROM (
+                SELECT stat_date FROM daily_key_stats
+                UNION ALL
+                SELECT stat_date FROM daily_mouse_stats
+                UNION ALL
+                SELECT stat_date FROM hourly_activity_stats
+            );
+            """;
+        var value = command.ExecuteScalar();
+        if (value is null or DBNull)
+        {
+            return Task.FromResult<DateOnly?>(null);
+        }
+
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Task.FromResult<DateOnly?>(null);
+        }
+
+        return Task.FromResult<DateOnly?>(ParseDate(text));
+    }
+
     private static void UpsertKey(SqliteConnection connection, DateOnly date, string key, long count)
     {
         using var command = connection.CreateCommand();

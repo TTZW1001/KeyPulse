@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P10 (accepted)
+Current Phase: P11 (implemented, pending acceptance)
 
 ## Completed
 
@@ -15,14 +15,14 @@ Current Phase: P10 (accepted)
 - P8 Dashboard
 - P9 Keyboard heatmap
 - P10 Mouse page
+- P11 Trends page
 
 ## Current
 
-- Ready for P11 Trends page
+- Ready for P12 Apps stats
 
 ## Pending
 
-- P11 Trends page
 - P12 Apps stats
 - P13 Settings
 - P14 Stability
@@ -31,7 +31,7 @@ Current Phase: P10 (accepted)
 
 ## Last Verified Commit
 
-`4d3db9c` — `feat: add mouse stats`
+`199a76a` — `feat: add trends`
 
 ## Known Issues
 

@@ -34,4 +34,6 @@ public interface IStatisticsRepository
         DateOnly from,
         DateOnly to,
         CancellationToken cancellationToken = default);
+
+    Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default);
 }

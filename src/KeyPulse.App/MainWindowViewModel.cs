@@ -14,6 +14,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly DashboardViewModel _dashboard;
     private readonly KeyboardViewModel _keyboard;
     private readonly MouseViewModel _mouse;
+    private readonly TrendsViewModel _trends;
     private readonly object _dashboardPage;
     private readonly object _keyboardPage;
     private readonly object _mousePage;
@@ -36,6 +37,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _dashboard = dashboard;
         _keyboard = keyboard;
         _mouse = mouse;
+        _trends = trends;
         _dashboardPage = dashboard;
         _keyboardPage = keyboard;
         _mousePage = mouse;
@@ -129,6 +131,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (value.Page == AppPage.Mouse)
         {
             _mouse.Refresh();
+        }
+
+        if (value.Page == AppPage.Trends)
+        {
+            _trends.Refresh();
         }
     }
 }

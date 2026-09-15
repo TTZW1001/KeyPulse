@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddSingleton<IDashboardQuery, DashboardQueryService>();
         services.AddSingleton<IKeyboardQuery, KeyboardQueryService>();
         services.AddSingleton<IMouseQuery, MouseQueryService>();
+        services.AddSingleton<ITrendQuery, TrendQueryService>();
         return services;
     }
 }
