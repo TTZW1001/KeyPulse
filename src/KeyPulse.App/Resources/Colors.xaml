@@ -15,6 +15,7 @@
     <Color x:Key="ControlBorderColor">#E4E4E1</Color>
     <Color x:Key="GridHeaderColor">#F7F7F5</Color>
     <Color x:Key="GridRowHoverColor">#F3F3F0</Color>
+    <Color x:Key="GridAlternateRowColor">#F3F6FA</Color>
     <Color x:Key="GridSelectionColor">#E4EAF1</Color>
     <Color x:Key="DangerColor">#A33B3B</Color>
 
@@ -31,6 +32,7 @@
     <SolidColorBrush x:Key="ControlBorderBrush" Color="{StaticResource ControlBorderColor}"/>
     <SolidColorBrush x:Key="GridHeaderBrush" Color="{StaticResource GridHeaderColor}"/>
     <SolidColorBrush x:Key="GridRowHoverBrush" Color="{StaticResource GridRowHoverColor}"/>
+    <SolidColorBrush x:Key="GridAlternateRowBrush" Color="{StaticResource GridAlternateRowColor}"/>
     <SolidColorBrush x:Key="GridSelectionBrush" Color="{StaticResource GridSelectionColor}"/>
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}"/>
 </ResourceDictionary>

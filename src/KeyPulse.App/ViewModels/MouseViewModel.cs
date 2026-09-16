@@ -396,8 +396,16 @@ public sealed partial class MouseViewModel : ObservableObject
                 drawing.DrawRectangle(Media.Brushes.WhiteSmoke, new Media.Pen(Media.Brushes.LightGray, 2),
                     new Rect(x, 255, panelWidth, 460));
                 var image = RenderHeatmap(result, modes[i].Item2);
-                var imageHeight = Math.Min(420, panelWidth * image.PixelHeight / (double)image.PixelWidth);
-                drawing.DrawImage(image, new Rect(x + 10, 275 + (420 - imageHeight) / 2, panelWidth - 20, imageHeight));
+                var availableWidth = panelWidth - 20.0;
+                const double availableHeight = 420;
+                var imageScale = Math.Min(availableWidth / image.PixelWidth, availableHeight / image.PixelHeight);
+                var imageWidth = image.PixelWidth * imageScale;
+                var imageHeight = image.PixelHeight * imageScale;
+                drawing.DrawImage(image, new Rect(
+                    x + 10 + (availableWidth - imageWidth) / 2,
+                    275 + (availableHeight - imageHeight) / 2,
+                    imageWidth,
+                    imageHeight));
             }
 
             var percent = result.TotalPixels <= 0 ? 0 : result.VisitedPixels * 100.0 / result.TotalPixels;
@@ -405,7 +413,9 @@ public sealed partial class MouseViewModel : ObservableObject
             DrawText(drawing, "仅包含本机坐标统计；不包含屏幕截图、窗口名称或输入内容。", 20, 72, 820, Media.Brushes.DimGray);
         }
 
-        var bitmap = new RenderTargetBitmap(width, height, 144, 144, Media.PixelFormats.Pbgra32);
+        // DrawingVisual coordinates are device-independent pixels. Rendering at 96 DPI keeps the
+        // requested 1800 x 920 canvas intact instead of scaling and clipping its right/bottom edges.
+        var bitmap = new RenderTargetBitmap(width, height, 96, 96, Media.PixelFormats.Pbgra32);
         bitmap.Render(visual);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
@@ -513,9 +523,12 @@ public sealed partial class MouseViewModel : ObservableObject
 
     private static BitmapSource RenderHeatmap(PointerHeatmapResult result, HeatmapMode mode)
     {
-        const int width = 720;
-        var height = Math.Clamp((int)Math.Round(width * result.Layout.VirtualHeight /
-            (double)Math.Max(1, result.Layout.VirtualWidth)), 120, 360);
+        const int maxDimension = 720;
+        var scale = Math.Min(
+            maxDimension / (double)Math.Max(1, result.Layout.VirtualWidth),
+            maxDimension / (double)Math.Max(1, result.Layout.VirtualHeight));
+        var width = Math.Max(1, (int)Math.Round(result.Layout.VirtualWidth * scale));
+        var height = Math.Max(1, (int)Math.Round(result.Layout.VirtualHeight * scale));
         var pixels = new byte[width * height * 4];
         foreach (var monitor in result.Layout.Monitors)
         {

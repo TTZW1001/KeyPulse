@@ -28,6 +28,7 @@ public sealed class ThemeService : IDisposable
         ["ControlBorder"] = "#E4E4E1",
         ["GridHeader"] = "#F7F7F5",
         ["GridRowHover"] = "#F3F3F0",
+        ["GridAlternateRow"] = "#F3F6FA",
         ["GridSelection"] = "#E4EAF1",
         ["Danger"] = "#A33B3B"
     };
@@ -47,6 +48,7 @@ public sealed class ThemeService : IDisposable
         ["ControlBorder"] = "#343434",
         ["GridHeader"] = "#1C1C1C",
         ["GridRowHover"] = "#262626",
+        ["GridAlternateRow"] = "#242930",
         ["GridSelection"] = "#2A3340",
         ["Danger"] = "#D97A7A"
     };

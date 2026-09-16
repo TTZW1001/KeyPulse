@@ -225,7 +225,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
             key.Count = count;
             key.HoverText = key.KeyCode + " · " + count.ToString("N0", culture) + " 次";
             key.Fill = NewBrush(Lerp(unused, Accent, t));
-            key.LabelBrush = t >= 0.45 || (dark && t >= 0.28) ? DarkLabel : LightLabel;
+            key.LabelBrush = dark || t >= 0.45 ? DarkLabel : LightLabel;
         }
 
         var legend = new Media.Brush[5];

@@ -7,7 +7,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="RowBackground" Value="{DynamicResource ContentBackgroundBrush}"/>
-        <Setter Property="AlternatingRowBackground" Value="{DynamicResource ContentBackgroundBrush}"/>
+        <Setter Property="AlternatingRowBackground" Value="{DynamicResource GridAlternateRowBrush}"/>
+        <Setter Property="AlternationCount" Value="2"/>
         <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource DividerBrush}"/>
         <Setter Property="VerticalGridLinesBrush" Value="Transparent"/>
         <Setter Property="GridLinesVisibility" Value="Horizontal"/>
@@ -52,6 +53,9 @@
                     <Setter Property="Background" Value="{DynamicResource ContentBackgroundBrush}"/>
                     <Setter Property="SnapsToDevicePixels" Value="True"/>
                     <Style.Triggers>
+                        <Trigger Property="AlternationIndex" Value="1">
+                            <Setter Property="Background" Value="{DynamicResource GridAlternateRowBrush}"/>
+                        </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{DynamicResource GridRowHoverBrush}"/>
                         </Trigger>

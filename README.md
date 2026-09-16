@@ -45,7 +45,7 @@ KeyPulse 默认只保存聚合后的次数和时长，不记录：
 开机自启由设置页控制，启用后使用 `--startup` 静默启动。
 
 > Windows 可能对未签名安装包显示 SmartScreen 提示。请在下载后对照 `checksums.txt`
-> 验证 SHA-256。KeyPulse 1.1.1 未附带代码签名证书。
+> 验证 SHA-256。KeyPulse 1.1.2 未附带代码签名证书。
 
 ## 从源码构建
 
