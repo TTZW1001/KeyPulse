@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P21 — V1.1.4 global-hotkey diagnostics and modifier recovery
+Current Phase: P22 — V1.1.5 suppressed key-down hotkey recovery
 
 ## Completed
 
@@ -26,10 +26,11 @@ Current Phase: P21 — V1.1.4 global-hotkey diagnostics and modifier recovery
 - P19 V1.1.2 visual fixes
 - P20 V1.1.3 dashboard detail and global-hotkey compatibility
 - P21 V1.1.4 global-hotkey diagnostics and modifier recovery
+- P22 V1.1.5 suppressed key-down hotkey recovery
 
 ## Last Verified Commit
 
-`db830a2` — V1.1.4 global-hotkey modifier recovery and opt-in diagnostics
+`4958999` — V1.1.5 suppressed key-down hotkey recovery
 
 ## Known Issues
 
@@ -44,5 +45,6 @@ Current Phase: P21 — V1.1.4 global-hotkey diagnostics and modifier recovery
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Fn itself may not be reported by Windows; recognizable media/function results are still counted as keys
 - Historical `VK_FF` rows are hidden rather than rewritten because their original keys cannot be recovered
+- A third-party global hook that suppresses both key-down and key-up remains impossible to observe
 - Keyboard page still refreshes from the 1s shell timer when not visible
 - No DB backup / JSON export / clear-today (P13 shipped CSV export + clear-all only)
