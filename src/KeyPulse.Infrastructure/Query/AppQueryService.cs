@@ -40,7 +40,7 @@ public sealed class AppQueryService : IAppQuery
             }
 
             Add(map, row.ProcessName, row.DisplayName, row.KeyPressCount, row.MouseClickCount,
-                row.WheelEventCount, row.MouseDistancePixels, row.ActiveSeconds);
+                row.WheelEventCount, row.CursorDistancePixels, row.ActiveSeconds);
         }
 
         foreach (var day in unflushed.AppStatsByDate)
@@ -53,7 +53,7 @@ public sealed class AppQueryService : IAppQuery
             foreach (var app in day.Value)
             {
                 Add(map, app.Key, app.Value.DisplayName, app.Value.KeyPressCount, app.Value.MouseClickCount,
-                    app.Value.WheelEventCount, app.Value.MouseDistancePixels, app.Value.ActiveSeconds);
+                    app.Value.WheelEventCount, app.Value.CursorDistancePixels, app.Value.ActiveSeconds);
             }
         }
 

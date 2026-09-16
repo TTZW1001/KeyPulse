@@ -11,6 +11,11 @@ public interface IStatisticsRepository
         DateOnly to,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<DailyShortcutRow>> GetShortcutStatsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DailyMouseRow>> GetMouseStatsAsync(
         DateOnly from,
         DateOnly to,
@@ -38,6 +43,8 @@ public interface IStatisticsRepository
     Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default);
 
     Task ClearStatisticsAsync(CancellationToken cancellationToken = default);
+
+    Task ClearPositionDataAsync(CancellationToken cancellationToken = default);
 
     bool TryPing();
 }

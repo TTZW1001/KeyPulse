@@ -18,4 +18,6 @@ public interface IStatisticsAggregator
     void Merge(StatisticsBatch batch);
 
     void Clear();
+
+    void ClearPositionData();
 }

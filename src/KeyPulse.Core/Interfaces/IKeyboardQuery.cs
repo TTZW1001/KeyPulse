@@ -6,4 +6,9 @@ public interface IKeyboardQuery
         DateOnly from,
         DateOnly to,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<string, long>> GetShortcutCountsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default);
 }

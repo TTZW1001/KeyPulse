@@ -28,7 +28,7 @@ public static class KeyMapper
         {
             0x08 => Named("Backspace"),
             0x09 => Named("Tab"),
-            0x0D => Named("Enter"),
+            0x0D => Named(extended ? "NumPadEnter" : "Enter"),
             0x10 => Named(makeCode == 0x36 ? "RightShift" : "LeftShift"),
             0x11 => Named(extended ? "RightCtrl" : "LeftCtrl"),
             0x12 => Named(extended ? "RightAlt" : "LeftAlt"),
@@ -106,7 +106,7 @@ public static class KeyMapper
         {
             return makeCode switch
             {
-                0x1C => Named("Enter"),
+                0x1C => Named("NumPadEnter"),
                 0x1D => Named("RightCtrl"),
                 0x35 => Named("NumPadDivide"),
                 0x37 => Named("PrintScreen"),

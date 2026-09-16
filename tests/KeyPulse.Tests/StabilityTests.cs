@@ -343,6 +343,9 @@ public class StabilityTests : IDisposable
         public Task<IReadOnlyList<DailyKeyRow>> GetKeyStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<DailyKeyRow>>(Array.Empty<DailyKeyRow>());
 
+        public Task<IReadOnlyList<DailyShortcutRow>> GetShortcutStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DailyShortcutRow>>(Array.Empty<DailyShortcutRow>());
+
         public Task<IReadOnlyList<DailyMouseRow>> GetMouseStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<DailyMouseRow>>(Array.Empty<DailyMouseRow>());
 
@@ -362,6 +365,8 @@ public class StabilityTests : IDisposable
             Task.FromResult<DateOnly?>(null);
 
         public Task ClearStatisticsAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task ClearPositionDataAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
         public bool TryPing() => false;
     }

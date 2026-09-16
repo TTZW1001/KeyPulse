@@ -57,13 +57,20 @@ public class PersistenceTests : IDisposable
         Assert.Contains("daily_app_stats", tables);
         Assert.Contains("app_registry", tables);
         Assert.Contains("settings_meta", tables);
+        Assert.Contains("daily_shortcut_stats", tables);
+        Assert.Contains("display_layouts", tables);
+        Assert.Contains("display_monitors", tables);
+        Assert.Contains("hourly_click_points", tables);
+        Assert.Contains("daily_pointer_density", tables);
+        Assert.Contains("pointer_occupancy_tiles", tables);
         Assert.DoesNotContain("keyboard_events", tables);
         Assert.DoesNotContain("input_events", tables);
         Assert.DoesNotContain("key_sequence", tables);
         Assert.DoesNotContain("typed_text", tables);
         Assert.DoesNotContain("window_titles", tables);
 
-        Assert.Equal(1, Convert.ToInt32(Scalar(connection, "SELECT version FROM schema_version WHERE id = 1;")));
+        Assert.Equal(MigrationRunner.CurrentSchemaVersion,
+            Convert.ToInt32(Scalar(connection, "SELECT version FROM schema_version WHERE id = 1;")));
         Assert.Equal("wal", Scalar(connection, "PRAGMA journal_mode;")?.ToString()?.ToLowerInvariant());
     }
 
@@ -113,7 +120,8 @@ public class PersistenceTests : IDisposable
 
         using var connection = _factory.Open();
         Assert.Equal(0, Convert.ToInt32(Scalar(connection, "SELECT COUNT(*) FROM daily_key_stats;")));
-        Assert.Equal(1, Convert.ToInt32(Scalar(connection, "SELECT version FROM schema_version WHERE id = 1;")));
+        Assert.Equal(MigrationRunner.CurrentSchemaVersion,
+            Convert.ToInt32(Scalar(connection, "SELECT version FROM schema_version WHERE id = 1;")));
     }
 
     [Fact]
@@ -234,6 +242,9 @@ public class PersistenceTests : IDisposable
         public Task<IReadOnlyList<DailyKeyRow>> GetKeyStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<DailyKeyRow>>(Array.Empty<DailyKeyRow>());
 
+        public Task<IReadOnlyList<DailyShortcutRow>> GetShortcutStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DailyShortcutRow>>(Array.Empty<DailyShortcutRow>());
+
         public Task<IReadOnlyList<DailyMouseRow>> GetMouseStatsAsync(DateOnly from, DateOnly to, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<DailyMouseRow>>(Array.Empty<DailyMouseRow>());
 
@@ -253,6 +264,9 @@ public class PersistenceTests : IDisposable
             Task.FromResult<DateOnly?>(null);
 
         public Task ClearStatisticsAsync(CancellationToken cancellationToken = default) =>
+            throw new IOException("simulated flush failure");
+
+        public Task ClearPositionDataAsync(CancellationToken cancellationToken = default) =>
             throw new IOException("simulated flush failure");
 
         public bool TryPing() => false;

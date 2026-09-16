@@ -7,6 +7,11 @@ internal static class RawInputNativeMethods
     public const int WM_INPUT = 0x00FF;
     public const int WM_DESTROY = 0x0002;
     public const int WM_CLOSE = 0x0010;
+    public const int SM_XVIRTUALSCREEN = 76;
+    public const int SM_YVIRTUALSCREEN = 77;
+    public const int SM_CXVIRTUALSCREEN = 78;
+    public const int SM_CYVIRTUALSCREEN = 79;
+    public const uint MONITORINFOF_PRIMARY = 0x00000001;
     public const uint RID_INPUT = 0x10000003;
     public const uint RIDEV_INPUTSINK = 0x00000100;
     public const uint RIDEV_REMOVE = 0x00000001;
@@ -49,6 +54,27 @@ internal static class RawInputNativeMethods
         IntPtr pData,
         ref uint pcbSize,
         uint cbSizeHeader);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT point);
+
+    [DllImport("user32.dll")]
+    public static extern int GetSystemMetrics(int index);
+
+    public delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, ref RECT rect, IntPtr data);
+
+    [DllImport("user32.dll")]
+    public static extern bool EnumDisplayMonitors(
+        IntPtr hdc,
+        IntPtr clipRect,
+        MonitorEnumProc callback,
+        IntPtr data);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern bool GetMonitorInfo(IntPtr monitor, ref MONITORINFOEX info);
+
+    [DllImport("shcore.dll")]
+    public static extern int GetDpiForMonitor(IntPtr monitor, int dpiType, out uint dpiX, out uint dpiY);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     public static extern ushort RegisterClassEx(ref WNDCLASSEX lpwcx);
@@ -94,6 +120,32 @@ internal static class RawInputNativeMethods
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string? lpModuleName);
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct POINT
+{
+    public int X;
+    public int Y;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct RECT
+{
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+}
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+internal struct MONITORINFOEX
+{
+    public uint cbSize;
+    public RECT rcMonitor;
+    public RECT rcWork;
+    public uint dwFlags;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)] public string szDevice;
 }
 
 [StructLayout(LayoutKind.Sequential)]

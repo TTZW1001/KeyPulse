@@ -9,7 +9,6 @@ $ErrorActionPreference = "Stop"
 $repositoryRoot = $PSScriptRoot
 $publishDirectory = Join-Path $repositoryRoot "publish\$Runtime"
 $releaseDirectory = Join-Path $repositoryRoot "release"
-$portablePath = Join-Path $releaseDirectory "KeyPulse-portable.zip"
 $checksumsPath = Join-Path $releaseDirectory "checksums.txt"
 
 foreach ($path in @($publishDirectory, $releaseDirectory)) {
@@ -33,8 +32,6 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
 }
 
-Compress-Archive -Path (Join-Path $publishDirectory "*") -DestinationPath $portablePath
-
 if ([string]::IsNullOrWhiteSpace($IsccPath)) {
     $candidates = @(
         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
@@ -51,7 +48,7 @@ if (-not [string]::IsNullOrWhiteSpace($IsccPath)) {
     }
 }
 else {
-    Write-Warning "Inno Setup 6 was not found; portable artifact was created without the installer."
+    throw "Inno Setup 6 was not found; KeyPulse ships only the self-contained installer."
 }
 
 $artifacts = Get-ChildItem -LiteralPath $releaseDirectory -File |

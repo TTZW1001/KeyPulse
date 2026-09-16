@@ -10,7 +10,9 @@ public readonly record struct MouseTotals(
     long WheelDown,
     long WheelLeft,
     long WheelRight,
-    double DistancePixels)
+    double DistancePixels,
+    double CursorDistancePixels = 0,
+    double EstimatedDistanceMeters = 0)
 {
     public static MouseTotals Zero { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
@@ -24,5 +26,7 @@ public readonly record struct MouseTotals(
         WheelDown + other.WheelDown,
         WheelLeft + other.WheelLeft,
         WheelRight + other.WheelRight,
-        DistancePixels + other.DistancePixels);
+        DistancePixels + other.DistancePixels,
+        CursorDistancePixels + other.CursorDistancePixels,
+        EstimatedDistanceMeters + other.EstimatedDistanceMeters);
 }

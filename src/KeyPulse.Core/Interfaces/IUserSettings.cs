@@ -6,5 +6,13 @@ public interface IUserSettings
 
     ThemeMode Theme { get; set; }
 
+    KeyboardLayoutKind KeyboardLayout { get; set; }
+
+    bool KeyboardLayoutExplicitlyChosen { get; set; }
+
+    bool ShortcutStatsEnabled { get; set; }
+
+    bool ScreenPositionStatsEnabled { get; set; }
+
     void Save();
 }

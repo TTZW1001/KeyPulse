@@ -10,6 +10,7 @@ public sealed class RawInputService : IInputCapture, IDisposable
     private readonly ILogger<RawInputService> _logger;
     private readonly RawKeyboardParser _keyboardParser;
     private readonly RawMouseParser _mouseParser;
+    private readonly DisplayLayoutProvider _displayLayout;
     private readonly uint _headerSize = (uint)Marshal.SizeOf<RAWINPUTHEADER>();
     private readonly List<InputEvent> _mouseBuffer = new(8);
     private readonly object _gate = new();
@@ -25,11 +26,13 @@ public sealed class RawInputService : IInputCapture, IDisposable
     public RawInputService(
         ILogger<RawInputService> logger,
         RawKeyboardParser keyboardParser,
-        RawMouseParser mouseParser)
+        RawMouseParser mouseParser,
+        DisplayLayoutProvider displayLayout)
     {
         _logger = logger;
         _keyboardParser = keyboardParser;
         _mouseParser = mouseParser;
+        _displayLayout = displayLayout;
     }
 
     public event EventHandler<InputEvent>? InputReceived;
@@ -299,9 +302,18 @@ public sealed class RawInputService : IInputCapture, IDisposable
                 timestamp,
                 _mouseBuffer);
 
+            var position = _mouseBuffer.Any(item => item is MouseMoveEvent or MouseButtonEvent)
+                ? _displayLayout.GetCursorPosition()
+                : null;
             foreach (var parsed in _mouseBuffer)
             {
-                InputReceived?.Invoke(this, parsed);
+                var enriched = parsed switch
+                {
+                    MouseMoveEvent move => move with { Position = position },
+                    MouseButtonEvent button => button with { Position = position },
+                    _ => parsed
+                };
+                InputReceived?.Invoke(this, enriched);
             }
         }
     }

@@ -18,10 +18,12 @@ public class RawKeyboardParserTests
     }
 
     [Fact]
-    public void IgnoresKeyUp()
+    public void EmitsKeyUp_ForShortcutStateTracking()
     {
         var parsed = _parser.TryParse(0x41, RawKeyboardParser.KeyBreak, 0x1E, DateTimeOffset.UnixEpoch);
-        Assert.Null(parsed);
+        Assert.NotNull(parsed);
+        Assert.False(parsed!.IsKeyDown);
+        Assert.Equal("A", parsed.Key.Name);
     }
 }
 

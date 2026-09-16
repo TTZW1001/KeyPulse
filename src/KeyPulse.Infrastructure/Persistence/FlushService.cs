@@ -143,6 +143,22 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
         }
     }
 
+    public async Task ClearPositionDataAsync(CancellationToken cancellationToken = default)
+    {
+        await _flushLock.WaitAsync(cancellationToken);
+        try
+        {
+            await _repository.ClearPositionDataAsync(cancellationToken);
+            _aggregator.ClearPositionData();
+            _logger.LogInformation("Pointer position statistics cleared");
+            RaiseSafely(Flushed, "Clear-position notification failed");
+        }
+        finally
+        {
+            _flushLock.Release();
+        }
+    }
+
     public void Dispose()
     {
         _cts.Cancel();

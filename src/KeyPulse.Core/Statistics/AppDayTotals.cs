@@ -6,7 +6,9 @@ public readonly record struct AppDayTotals(
     long WheelEventCount,
     double MouseDistancePixels,
     long ActiveSeconds,
-    string? DisplayName)
+    string? DisplayName,
+    double CursorDistancePixels = 0,
+    double EstimatedDistanceMeters = 0)
 {
     public static AppDayTotals Zero { get; } = new(0, 0, 0, 0, 0, null);
 
@@ -16,7 +18,9 @@ public readonly record struct AppDayTotals(
         WheelEventCount + other.WheelEventCount,
         MouseDistancePixels + other.MouseDistancePixels,
         ActiveSeconds + other.ActiveSeconds,
-        FirstNonEmpty(DisplayName, other.DisplayName));
+        FirstNonEmpty(DisplayName, other.DisplayName),
+        CursorDistancePixels + other.CursorDistancePixels,
+        EstimatedDistanceMeters + other.EstimatedDistanceMeters);
 
     public long ActivityCount => KeyPressCount + MouseClickCount + WheelEventCount;
 

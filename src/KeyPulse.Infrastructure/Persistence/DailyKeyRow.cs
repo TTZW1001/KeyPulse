@@ -4,6 +4,8 @@ namespace KeyPulse.Infrastructure.Persistence;
 
 public sealed record DailyKeyRow(DateOnly Date, string KeyCode, long PressCount);
 
+public sealed record DailyShortcutRow(DateOnly Date, string ShortcutCode, long PressCount);
+
 public sealed record DailyMouseRow(DateOnly Date, MouseTotals Mouse);
 
 public sealed record HourlyRow(
@@ -13,7 +15,9 @@ public sealed record HourlyRow(
     long MouseClickCount,
     long WheelEventCount,
     double MouseDistancePixels,
-    long ActiveSeconds);
+    long ActiveSeconds,
+    double CursorDistancePixels = 0,
+    double EstimatedDistanceMeters = 0);
 
 public sealed record DashboardSummary(
     DateOnly Date,
@@ -29,4 +33,6 @@ public sealed record DailyAppRow(
     long MouseClickCount,
     long WheelEventCount,
     double MouseDistancePixels,
-    long ActiveSeconds);
+    long ActiveSeconds,
+    double CursorDistancePixels = 0,
+    double EstimatedDistanceMeters = 0);

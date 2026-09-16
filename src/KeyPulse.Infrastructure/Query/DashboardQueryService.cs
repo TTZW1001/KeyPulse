@@ -73,7 +73,7 @@ public sealed class DashboardQueryService : IDashboardQuery
             keys.Values.Sum(),
             Clicks(mouse),
             Wheel(mouse),
-            mouse.DistancePixels,
+            mouse.CursorDistancePixels,
             topKey,
             topCount,
             _reader.State);

@@ -18,6 +18,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IExcludedAppList _exclusions;
     private readonly IFlushService _flush;
     private readonly IStatisticsExport _export;
+    private readonly IUserSettings _settings;
     private readonly object _gate = new();
     private bool _busy;
 
@@ -27,13 +28,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         IStartupService startup,
         IExcludedAppList exclusions,
         IFlushService flush,
-        IStatisticsExport export)
+        IStatisticsExport export,
+        IUserSettings settings)
     {
         _theme = theme;
         _startup = startup;
         _exclusions = exclusions;
         _flush = flush;
         _export = export;
+        _settings = settings;
         DataPath = paths.DataDirectory;
         DataRoot = paths.RootDirectory;
         ProductName = ProductInfo.Name;
@@ -83,6 +86,30 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool StartMinimized => true;
 
+    public bool ShortcutStatsEnabled
+    {
+        get => _settings.ShortcutStatsEnabled;
+        set
+        {
+            if (_settings.ShortcutStatsEnabled == value) return;
+            _settings.ShortcutStatsEnabled = value;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    public bool ScreenPositionStatsEnabled
+    {
+        get => _settings.ScreenPositionStatsEnabled;
+        set
+        {
+            if (_settings.ScreenPositionStatsEnabled == value) return;
+            _settings.ScreenPositionStatsEnabled = value;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsLightTheme
     {
         get => _theme.Mode == ThemeMode.Light;
@@ -123,6 +150,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(StartupEnabled));
         OnPropertyChanged(nameof(StartMinimized));
+        OnPropertyChanged(nameof(ShortcutStatsEnabled));
+        OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
         ReloadExcluded();
     }
 
@@ -230,6 +259,34 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             DataStatus = string.Empty;
             WpfMessageBox.Show("清空失败：" + ex.Message, ProductInfo.Name, System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+        finally
+        {
+            End();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearPositionDataAsync()
+    {
+        var confirm = WpfMessageBox.Show(
+            "将删除点击位置、轨迹热力图和像素覆盖数据，不影响基础键鼠次数。此操作不能撤销。",
+            "清除位置数据",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning,
+            System.Windows.MessageBoxResult.No);
+        if (confirm != System.Windows.MessageBoxResult.Yes || !TryBegin()) return;
+        try
+        {
+            DataStatus = "正在清除位置数据…";
+            await _flush.ClearPositionDataAsync().ConfigureAwait(true);
+            DataStatus = "位置数据已清除。";
+        }
+        catch (Exception ex)
+        {
+            DataStatus = string.Empty;
+            WpfMessageBox.Show("清除失败：" + ex.Message, ProductInfo.Name,
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
         finally
         {

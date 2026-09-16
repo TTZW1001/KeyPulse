@@ -35,6 +35,30 @@ public sealed class JsonUserSettings : IUserSettings
         set => _file.Theme = value;
     }
 
+    public KeyboardLayoutKind KeyboardLayout
+    {
+        get => _file.KeyboardLayout;
+        set => _file.KeyboardLayout = value;
+    }
+
+    public bool KeyboardLayoutExplicitlyChosen
+    {
+        get => _file.KeyboardLayoutExplicitlyChosen;
+        set => _file.KeyboardLayoutExplicitlyChosen = value;
+    }
+
+    public bool ShortcutStatsEnabled
+    {
+        get => _file.ShortcutStatsEnabled;
+        set => _file.ShortcutStatsEnabled = value;
+    }
+
+    public bool ScreenPositionStatsEnabled
+    {
+        get => _file.ScreenPositionStatsEnabled;
+        set => _file.ScreenPositionStatsEnabled = value;
+    }
+
     public void Save()
     {
         var directory = Path.GetDirectoryName(_path);
@@ -69,5 +93,13 @@ public sealed class JsonUserSettings : IUserSettings
         public bool HideToTrayHintDismissed { get; set; }
 
         public ThemeMode Theme { get; set; } = ThemeMode.System;
+
+        public KeyboardLayoutKind KeyboardLayout { get; set; } = KeyboardLayoutKind.CompactLaptop;
+
+        public bool KeyboardLayoutExplicitlyChosen { get; set; }
+
+        public bool ShortcutStatsEnabled { get; set; } = true;
+
+        public bool ScreenPositionStatsEnabled { get; set; }
     }
 }

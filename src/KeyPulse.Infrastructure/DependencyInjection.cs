@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<IExcludedAppList, ExcludedAppList>();
         services.AddSingleton<RawKeyboardParser>();
         services.AddSingleton<RawMouseParser>();
+        services.AddSingleton<DisplayLayoutProvider>();
         services.AddSingleton<IInputCapture, RawInputService>();
         services.AddSingleton<IForegroundProcessNative, WindowsForegroundProcessNative>();
         services.AddSingleton<IForegroundAppResolver, ForegroundAppResolver>();
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.AddSingleton<IDashboardQuery, DashboardQueryService>();
         services.AddSingleton<IKeyboardQuery, KeyboardQueryService>();
         services.AddSingleton<IMouseQuery, MouseQueryService>();
+        services.AddSingleton<IPointerHeatmapQuery, PointerHeatmapQueryService>();
         services.AddSingleton<ITrendQuery, TrendQueryService>();
         services.AddSingleton<IAppQuery, AppQueryService>();
         services.AddSingleton<IStatisticsExport, StatisticsExportService>();

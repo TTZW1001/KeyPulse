@@ -4,127 +4,114 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
-    <DockPanel>
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <RadioButton Content="今天"
-                             GroupName="KeyboardRange"
-                             IsChecked="{Binding IsTodayRange, Mode=TwoWay}"
-                             AutomationProperties.AutomationId="KeyboardToday"/>
-                <RadioButton Content="最近 7 天"
-                             GroupName="KeyboardRange"
-                             IsChecked="{Binding IsLast7DaysRange, Mode=TwoWay}"
-                             AutomationProperties.AutomationId="KeyboardLast7"/>
-            </StackPanel>
-            <TextBlock Text="按键热力图" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
-        </DockPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="20"/><ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="按键热力图" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                <ComboBox Grid.Column="1" Width="154" ItemsSource="{Binding KeyboardLayoutOptions}"
+                          SelectedItem="{Binding SelectedLayout, Mode=TwoWay}"
+                          DisplayMemberPath="DisplayName"
+                          AutomationProperties.AutomationId="KeyboardLayoutSelector"/>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton Content="今天" GroupName="KeyboardRange"
+                                 IsChecked="{Binding IsTodayRange, Mode=TwoWay}"/>
+                    <RadioButton Content="最近 7 天" GroupName="KeyboardRange"
+                                 IsChecked="{Binding IsLast7DaysRange, Mode=TwoWay}"/>
+                </StackPanel>
+            </Grid>
 
-        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="少" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <ItemsControl ItemsSource="{Binding LegendFills}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
+            <Border Visibility="{Binding ShowFullSizeSuggestion, Converter={StaticResource BoolToVis}}"
+                    Background="{DynamicResource SelectionBrush}" BorderBrush="{DynamicResource AccentBrush}"
+                    BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,10">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="切换到全尺寸"
+                            Command="{Binding UseSuggestedFullSizeCommand}" Margin="12,0,0,0"/>
+                    <TextBlock Text="检测到数字小键盘输入，这台设备可能使用全尺寸键盘。"
+                               Style="{StaticResource BodyText}" VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+
+            <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left"
+                     MaxHeight="310" AutomationProperties.AutomationId="HeatmapScaler">
+                <ItemsControl ItemsSource="{Binding Keys}" Width="{Binding CanvasWidth}"
+                              Height="{Binding CanvasHeight}" AutomationProperties.AutomationId="Heatmap">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Width="18" Height="10" Margin="1,0"
-                                    Background="{Binding}"
-                                    BorderBrush="{DynamicResource DividerBrush}"
-                                    BorderThickness="1"/>
+                            <Border Width="{Binding Width}" Height="{Binding Height}" Background="{Binding Fill}"
+                                    BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
+                                    CornerRadius="4" ToolTip="{Binding HoverText}"
+                                    AutomationProperties.Name="{Binding HoverText}">
+                                <TextBlock Text="{Binding Label}" FontSize="10"
+                                           FontFamily="{DynamicResource AppFontFamily}"
+                                           Foreground="{Binding LabelBrush}" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" TextAlignment="Center"/>
+                            </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="多" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-            </StackPanel>
-            <TextBlock Text="Hover 显示键名和次数。未上图的键列在「其他」。"
-                       Style="{StaticResource SecondaryText}"
-                       VerticalAlignment="Center"/>
-        </DockPanel>
+            </Viewbox>
 
-        <DockPanel>
-        <Grid DockPanel.Dock="Bottom" Margin="0,10,0,0" MaxHeight="96">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="160"/>
-                <ColumnDefinition Width="20"/>
-                <ColumnDefinition Width="*" MinWidth="160"/>
-            </Grid.ColumnDefinitions>
-            <DockPanel Grid.Column="0" Visibility="{Binding HasTopKeys, Converter={StaticResource BoolToVis}}">
-                <TextBlock DockPanel.Dock="Top" Text="最常用" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/>
-                <ItemsControl ItemsSource="{Binding TopKeys}" AutomationProperties.AutomationId="TopKeys">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="0,2">
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Style="{StaticResource SecondaryText}"/>
-                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"/>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+            <DockPanel Margin="0,10,0,0">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock Text="少" Style="{StaticResource SecondaryText}" Margin="0,0,8,0"/>
+                    <ItemsControl ItemsSource="{Binding LegendFills}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Border Width="18" Height="10" Margin="1,0" Background="{Binding}"
+                                    BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"/>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="多" Style="{StaticResource SecondaryText}" Margin="8,0,0,0"/>
+                </StackPanel>
+                <TextBlock Text="悬停显示键名和次数；当前布局未显示的按键列在「其他按键」。"
+                           Style="{StaticResource SecondaryText}"/>
             </DockPanel>
-            <DockPanel Grid.Column="2" Visibility="{Binding HasOtherKeys, Converter={StaticResource BoolToVis}}">
-                <TextBlock DockPanel.Dock="Top" Text="其他按键" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/>
-                <ItemsControl ItemsSource="{Binding OtherKeys}" AutomationProperties.AutomationId="OtherKeys">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="0,2">
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Style="{StaticResource SecondaryText}"/>
-                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"/>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </DockPanel>
-        </Grid>
 
-        <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      AutomationProperties.AutomationId="HeatmapScroller">
-            <ItemsControl ItemsSource="{Binding Keys}"
-                          Width="{Binding CanvasWidth}"
-                          Height="{Binding CanvasHeight}"
-                          HorizontalAlignment="Left"
-                          VerticalAlignment="Top"
-                          Margin="0,0,0,8"
-                          AutomationProperties.AutomationId="Heatmap">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style TargetType="ContentPresenter">
-                        <Setter Property="Canvas.Left" Value="{Binding Left}"/>
-                        <Setter Property="Canvas.Top" Value="{Binding Top}"/>
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Width="{Binding Width}"
-                                Height="{Binding Height}"
-                                Background="{Binding Fill}"
-                                BorderBrush="{DynamicResource DividerBrush}"
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                SnapsToDevicePixels="True"
-                                ToolTip="{Binding HoverText}"
-                                ToolTipService.InitialShowDelay="200"
-                                ToolTipService.ShowDuration="20000"
-                                AutomationProperties.Name="{Binding HoverText}">
-                            <TextBlock Text="{Binding Label}"
-                                       FontSize="10"
-                                       FontFamily="{DynamicResource AppFontFamily}"
-                                       Foreground="{Binding LabelBrush}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       TextAlignment="Center"/>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-        </DockPanel>
-    </DockPanel>
+            <Grid Margin="0,18,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="24"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="最常用按键" Style="{StaticResource SectionTitleText}" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding TopKeys}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <DockPanel Margin="0,3"><TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Style="{StaticResource SecondaryText}"/><TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"/></DockPanel>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="其他按键" Style="{StaticResource SectionTitleText}" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding OtherKeys}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <DockPanel Margin="0,3"><TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Style="{StaticResource SecondaryText}"/><TextBlock Text="{Binding Name}" Style="{StaticResource BodyText}"/></DockPanel>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Margin="0,22,0,0">
+                <TextBlock Text="常用快捷键" Style="{StaticResource SectionTitleText}"/>
+                <TextBlock Text="只统计 Ctrl、Alt 或 Win 参与的组合，不保存按键顺序或输入内容。"
+                           Style="{StaticResource SecondaryText}" Margin="0,4,0,10"/>
+                <ItemsControl ItemsSource="{Binding ShortcutRows}" AutomationProperties.AutomationId="ShortcutRows">
+                    <ItemsControl.ItemTemplate><DataTemplate>
+                        <DockPanel Margin="0,4" MaxWidth="520" HorizontalAlignment="Left">
+                            <TextBlock DockPanel.Dock="Right" Width="90" TextAlignment="Right"
+                                       Text="{Binding CountText}" Style="{StaticResource SecondaryText}"/>
+                            <TextBlock Width="280" Text="{Binding Name}" Style="{StaticResource BodyText}"/>
+                        </DockPanel>
+                    </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

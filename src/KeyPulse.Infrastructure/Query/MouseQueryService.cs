@@ -81,7 +81,7 @@ public sealed class MouseQueryService : IMouseQuery
                 mouse = mouse.Add(snap);
             }
 
-            points[i] = new MouseDayPoint(date, Clicks(mouse), Wheel(mouse), mouse.DistancePixels);
+            points[i] = new MouseDayPoint(date, Clicks(mouse), Wheel(mouse), mouse.CursorDistancePixels);
         }
 
         return points;

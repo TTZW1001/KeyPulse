@@ -11,4 +11,6 @@ public interface IFlushService
     Task FlushNowAsync(CancellationToken cancellationToken = default);
 
     Task ClearStatisticsAsync(CancellationToken cancellationToken = default);
+
+    Task ClearPositionDataAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

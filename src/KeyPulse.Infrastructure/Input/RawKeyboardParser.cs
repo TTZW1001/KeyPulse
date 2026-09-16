@@ -6,17 +6,13 @@ public sealed class RawKeyboardParser
 {
     public const ushort KeyBreak = RawInputNativeMethods.RI_KEY_BREAK;
 
-    public KeyPressedEvent? TryParse(ushort virtualKey, ushort flags, ushort makeCode, DateTimeOffset timestamp)
+    public KeyPressedEvent TryParse(ushort virtualKey, ushort flags, ushort makeCode, DateTimeOffset timestamp)
     {
-        if ((flags & KeyBreak) != 0)
-        {
-            return null;
-        }
-
         return new KeyPressedEvent
         {
             Timestamp = timestamp,
-            Key = KeyMapper.Map(virtualKey, flags, makeCode)
+            Key = KeyMapper.Map(virtualKey, flags, makeCode),
+            IsKeyDown = (flags & KeyBreak) == 0
         };
     }
 }

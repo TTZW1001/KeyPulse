@@ -9,6 +9,11 @@ public sealed record KeyboardKeyDefinition(
     double Width,
     double Height = 1);
 
+public sealed record KeyboardLayoutPreset(
+    KeyboardLayoutKind Kind,
+    string DisplayName,
+    IReadOnlyList<KeyboardKeyDefinition> Keys);
+
 public static class KeyboardLayoutDefinition
 {
     public const int KeyCount = 104;
@@ -19,8 +24,19 @@ public static class KeyboardLayoutDefinition
 
     public static IReadOnlyList<KeyboardKeyDefinition> Keys { get; } = Build();
 
+    public static IReadOnlyList<KeyboardLayoutPreset> Presets { get; } =
+    [
+        new(KeyboardLayoutKind.CompactLaptop, "紧凑型 / 笔记本", BuildCompact()),
+        new(KeyboardLayoutKind.TenKeyLess, "87 键 / TKL", BuildTenKeyLess()),
+        new(KeyboardLayoutKind.FullSize, "104 键 / 全尺寸", Keys)
+    ];
+
     public static IReadOnlySet<string> MappedKeyCodes { get; } =
-        Keys.Select(key => key.KeyCode).ToHashSet(StringComparer.Ordinal);
+        Presets.SelectMany(layout => layout.Keys).Select(key => key.KeyCode)
+            .ToHashSet(StringComparer.Ordinal);
+
+    public static KeyboardLayoutPreset Get(KeyboardLayoutKind kind) =>
+        Presets.FirstOrDefault(layout => layout.Kind == kind) ?? Presets[0];
 
     private static IReadOnlyList<KeyboardKeyDefinition> Build()
     {
@@ -89,7 +105,7 @@ public static class KeyboardLayoutDefinition
         keys.Add(K("NumPad1", "1", 4, NumX, y4, 1));
         keys.Add(K("NumPad2", "2", 4, NumX + 1, y4, 1));
         keys.Add(K("NumPad3", "3", 4, NumX + 2, y4, 1));
-        keys.Add(K("Enter", "Enter", 4, NumX + 3, y4, 1, 2));
+        keys.Add(K("NumPadEnter", "Enter", 4, NumX + 3, y4, 1, 2));
 
         Add(keys, 5, y5,
             ("LeftCtrl", "Ctrl", 1.25),
@@ -106,6 +122,20 @@ public static class KeyboardLayoutDefinition
         keys.Add(K("NumPad0", "0", 5, NumX, y5, 2));
         keys.Add(K("NumPadDecimal", ".", 5, NumX + 2, y5, 1));
 
+        return keys;
+    }
+
+    private static IReadOnlyList<KeyboardKeyDefinition> BuildTenKeyLess() =>
+        Keys.Where(key => key.X < NumX).ToList();
+
+    private static IReadOnlyList<KeyboardKeyDefinition> BuildCompact()
+    {
+        var keys = Keys.Where(key => key.X < 15).ToList();
+        keys.Add(K("Delete", "Del", 0, 14.25, 0, 0.75));
+        keys.Add(K("ArrowUp", "↑", 4, 13.25, 4.4, 0.75));
+        keys.Add(K("ArrowLeft", "←", 5, 12.5, 5.4, 0.75));
+        keys.Add(K("ArrowDown", "↓", 5, 13.25, 5.4, 0.75));
+        keys.Add(K("ArrowRight", "→", 5, 14, 5.4, 0.75));
         return keys;
     }
 

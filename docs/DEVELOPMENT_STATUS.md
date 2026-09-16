@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P16 (accepted) — V1.0 complete
+Current Phase: P17 — V1.1 interaction insights implemented, release verification in progress
 
 ## Completed
 
@@ -21,10 +21,11 @@ Current Phase: P16 (accepted) — V1.0 complete
 - P14 Stability
 - P15 Tests
 - P16 Packaging
+- P17 V1.1 interaction insights
 
 ## Last Verified Commit
 
-`7c450c3` — `chore: add installer and readme`
+Pending V1.1 release commit
 
 ## Known Issues
 
@@ -37,6 +38,6 @@ Current Phase: P16 (accepted) — V1.0 complete
 - AFK pause is not implemented; Flush stays 60 s
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
-- Numpad Enter and main Enter share key_code `Enter`
+- Fn itself may not be reported by Windows; recognizable media/function results are still counted as keys
 - Keyboard page still refreshes from the 1s shell timer when not visible
 - No DB backup / JSON export / clear-today (P13 shipped CSV export + clear-all only)

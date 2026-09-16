@@ -52,7 +52,8 @@ public sealed class ReleaseRegressionTests : IDisposable
 
         using var after = _factory.Open();
         Assert.Equal(1L, ScalarLong(after, "SELECT COUNT(*) FROM schema_version;"));
-        Assert.Equal(1L, ScalarLong(after, "SELECT version FROM schema_version WHERE id = 1;"));
+        Assert.Equal(MigrationRunner.CurrentSchemaVersion,
+            ScalarLong(after, "SELECT version FROM schema_version WHERE id = 1;"));
         Assert.Equal(createdAt, Scalar(after, "SELECT meta_value FROM settings_meta WHERE meta_key = 'created_at';"));
     }
 
@@ -118,7 +119,7 @@ public sealed class ReleaseRegressionTests : IDisposable
 
         Assert.Equal(2, rows.Length);
         Assert.Equal(
-            "2026-09-15,\"comma,app.exe\",\"Quoted \"\"App\"\", Suite\",1,2,3,4.5,6",
+            "2026-09-15,\"comma,app.exe\",\"Quoted \"\"App\"\", Suite\",1,2,3,4.5,6,0,0",
             rows[1]);
     }
 

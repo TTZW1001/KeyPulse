@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
@@ -23,45 +24,91 @@ public sealed partial class KeyboardViewModel : ObservableObject
     private readonly IKeyboardQuery _query;
     private readonly IFlushService _flush;
     private readonly ThemeService _theme;
+    private readonly IUserSettings _settings;
     private readonly Dispatcher _dispatcher;
     private readonly object _gate = new();
     private bool _busy;
     private KeyboardRange _range = KeyboardRange.Last7Days;
 
-    public KeyboardViewModel(IKeyboardQuery query, IFlushService flush, ThemeService theme)
+    public KeyboardViewModel(
+        IKeyboardQuery query,
+        IFlushService flush,
+        ThemeService theme,
+        IUserSettings settings)
     {
         _query = query;
         _flush = flush;
         _theme = theme;
+        _settings = settings;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _flush.Flushed += OnFlushed;
         _theme.Changed += OnThemeChanged;
 
-        var keys = new List<HeatmapKeyItem>(KeyboardLayoutDefinition.Keys.Count);
+        KeyboardLayoutOptions = KeyboardLayoutDefinition.Presets
+            .Select(layout => new KeyboardLayoutOption(layout.Kind, layout.DisplayName))
+            .ToList();
+        _selectedLayout = KeyboardLayoutOptions.First(option => option.Kind == settings.KeyboardLayout);
+        BuildLayout(_selectedLayout.Kind);
+        ApplyZeroFills();
+    }
+
+    public ObservableCollection<HeatmapKeyItem> Keys { get; } = [];
+
+    public IReadOnlyList<KeyboardLayoutOption> KeyboardLayoutOptions { get; }
+
+    public KeyboardLayoutOption SelectedLayout
+    {
+        get => _selectedLayout;
+        set
+        {
+            if (value is null || Equals(_selectedLayout, value)) return;
+            _selectedLayout = value;
+            OnPropertyChanged();
+            _settings.KeyboardLayout = value.Kind;
+            _settings.KeyboardLayoutExplicitlyChosen = true;
+            _settings.Save();
+            ShowFullSizeSuggestion = false;
+            BuildLayout(value.Kind);
+            Refresh();
+        }
+    }
+
+    private KeyboardLayoutOption _selectedLayout;
+
+    [ObservableProperty]
+    private double _canvasWidth;
+
+    [ObservableProperty]
+    private double _canvasHeight;
+
+    [ObservableProperty]
+    private bool _showFullSizeSuggestion;
+
+    private IReadOnlySet<string> _mappedKeyCodes = new HashSet<string>();
+
+    public ObservableCollection<OtherKeyRow> ShortcutRows { get; } = [];
+
+    private void BuildLayout(KeyboardLayoutKind kind)
+    {
+        var layout = KeyboardLayoutDefinition.Get(kind);
+        Keys.Clear();
         double maxRight = 0;
         double maxBottom = 0;
-        foreach (var def in KeyboardLayoutDefinition.Keys)
+        foreach (var def in layout.Keys)
         {
             var left = def.X * (Unit + Gap);
             var top = def.Y * (Unit + Gap);
             var width = def.Width * Unit + Math.Max(0, def.Width - 1) * Gap;
             var height = def.Height * Unit + Math.Max(0, def.Height - 1) * Gap;
-            keys.Add(new HeatmapKeyItem(def.KeyCode, def.Label, left, top, width, height));
+            Keys.Add(new HeatmapKeyItem(def.KeyCode, def.Label, left, top, width, height));
             maxRight = Math.Max(maxRight, left + width);
             maxBottom = Math.Max(maxBottom, top + height);
         }
 
-        Keys = keys;
         CanvasWidth = maxRight + 1;
         CanvasHeight = maxBottom + 1;
-        ApplyZeroFills();
+        _mappedKeyCodes = layout.Keys.Select(key => key.KeyCode).ToHashSet(StringComparer.Ordinal);
     }
-
-    public IReadOnlyList<HeatmapKeyItem> Keys { get; }
-
-    public double CanvasWidth { get; }
-
-    public double CanvasHeight { get; }
 
     public ObservableCollection<OtherKeyRow> OtherKeys { get; } = [];
 
@@ -69,10 +116,6 @@ public sealed partial class KeyboardViewModel : ObservableObject
 
     [ObservableProperty]
     private IReadOnlyList<Media.Brush> _legendFills = [];
-
-    public bool HasOtherKeys => OtherKeys.Count > 0;
-
-    public bool HasTopKeys => TopKeys.Count > 0;
 
     public bool IsTodayRange
     {
@@ -116,8 +159,10 @@ public sealed partial class KeyboardViewModel : ObservableObject
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             var from = _range == KeyboardRange.Today ? today : today.AddDays(-6);
-            var counts = await _query.GetKeyCountsAsync(from, today).ConfigureAwait(false);
-            await _dispatcher.InvokeAsync(() => ApplyCounts(counts));
+            var keysTask = _query.GetKeyCountsAsync(from, today);
+            var shortcutsTask = _query.GetShortcutCountsAsync(from, today);
+            await Task.WhenAll(keysTask, shortcutsTask).ConfigureAwait(false);
+            await _dispatcher.InvokeAsync(() => ApplyCounts(keysTask.Result, shortcutsTask.Result));
         }
         catch
         {
@@ -145,7 +190,9 @@ public sealed partial class KeyboardViewModel : ObservableObject
         Refresh();
     }
 
-    private void ApplyCounts(IReadOnlyDictionary<string, long> counts)
+    private void ApplyCounts(
+        IReadOnlyDictionary<string, long> counts,
+        IReadOnlyDictionary<string, long>? shortcuts = null)
     {
         var max = 0L;
         foreach (var key in Keys)
@@ -178,7 +225,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
 
         OtherKeys.Clear();
         foreach (var pair in counts
-                     .Where(p => p.Value > 0 && !KeyboardLayoutDefinition.MappedKeyCodes.Contains(p.Key))
+                     .Where(p => p.Value > 0 && !_mappedKeyCodes.Contains(p.Key))
                      .OrderByDescending(p => p.Value)
                      .ThenBy(p => p.Key, StringComparer.Ordinal)
                      .Take(12))
@@ -198,13 +245,30 @@ public sealed partial class KeyboardViewModel : ObservableObject
             TopKeys.Add(new OtherKeyRow(key.Label, key.Count.ToString("N0", culture)));
         }
 
-        OnPropertyChanged(nameof(HasOtherKeys));
-        OnPropertyChanged(nameof(HasTopKeys));
+        ShortcutRows.Clear();
+        if (shortcuts is not null)
+        {
+            foreach (var pair in shortcuts.OrderByDescending(pair => pair.Value)
+                         .ThenBy(pair => pair.Key, StringComparer.Ordinal).Take(10))
+            {
+                ShortcutRows.Add(new OtherKeyRow(pair.Key, pair.Value.ToString("N0", culture)));
+            }
+        }
+
+        ShowFullSizeSuggestion = !_settings.KeyboardLayoutExplicitlyChosen &&
+                                 _selectedLayout.Kind != KeyboardLayoutKind.FullSize &&
+                                 counts.Any(pair => pair.Value > 0 && pair.Key.StartsWith("NumPad", StringComparison.Ordinal));
     }
 
     private void ApplyZeroFills()
     {
         ApplyCounts(new Dictionary<string, long>(StringComparer.Ordinal));
+    }
+
+    [RelayCommand]
+    private void UseSuggestedFullSize()
+    {
+        SelectedLayout = KeyboardLayoutOptions.First(option => option.Kind == KeyboardLayoutKind.FullSize);
     }
 
     private void OnFlushed() => Refresh();
@@ -229,3 +293,5 @@ public sealed partial class KeyboardViewModel : ObservableObject
 }
 
 public sealed record OtherKeyRow(string Name, string CountText);
+
+public sealed record KeyboardLayoutOption(KeyboardLayoutKind Kind, string DisplayName);

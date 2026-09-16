@@ -19,5 +19,8 @@
     <EmbeddedResource Include="Persistence\Migrations\V001_Initial.sql">
       <LogicalName>KeyPulse.Infrastructure.Persistence.Migrations.V001_Initial.sql</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Persistence\Migrations\V002_InteractionHeatmaps.sql">
+      <LogicalName>KeyPulse.Infrastructure.Persistence.Migrations.V002_InteractionHeatmaps.sql</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

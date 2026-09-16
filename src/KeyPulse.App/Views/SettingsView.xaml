@@ -42,6 +42,19 @@
                 </StackPanel>
             </DockPanel>
 
+            <TextBlock Text="隐私与统计" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
+            <Border Style="{StaticResource SectionDivider}"/>
+            <CheckBox Content="统计快捷键组合（仅保存组合名称与累计次数）"
+                      IsChecked="{Binding ShortcutStatsEnabled, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="ShortcutStatsEnabled"/>
+            <CheckBox Content="记录屏幕位置热力图"
+                      IsChecked="{Binding ScreenPositionStatsEnabled, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="ScreenPositionStatsEnabled"/>
+            <TextBlock Text="只保存本机坐标统计，不截屏，不记录窗口名称或输入内容。"
+                       Style="{StaticResource SecondaryText}" Margin="22,0,0,8" TextWrapping="Wrap"/>
+            <Button Content="清除位置数据" Command="{Binding ClearPositionDataCommand}"
+                    HorizontalAlignment="Left" AutomationProperties.AutomationId="ClearPositionDataButton"/>
+
             <TextBlock Text="排除应用" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>
             <TextBlock Text="按进程名排除。不保存完整路径。默认项不可删除。"
