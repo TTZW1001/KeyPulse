@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P17 — V1.1 interaction insights implemented, release verification in progress
+Current Phase: P20 — V1.1.3 dashboard detail and global-hotkey compatibility
 
 ## Completed
 
@@ -22,10 +22,13 @@ Current Phase: P17 — V1.1 interaction insights implemented, release verificati
 - P15 Tests
 - P16 Packaging
 - P17 V1.1 interaction insights
+- P18 V1.1.1 interaction polish
+- P19 V1.1.2 visual fixes
+- P20 V1.1.3 dashboard detail and global-hotkey compatibility
 
 ## Last Verified Commit
 
-Pending V1.1 release commit
+`95074fa` — V1.1.3 dashboard detail and masked global-hotkey recovery
 
 ## Known Issues
 
@@ -39,5 +42,6 @@ Pending V1.1 release commit
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Fn itself may not be reported by Windows; recognizable media/function results are still counted as keys
+- Historical `VK_FF` rows are hidden rather than rewritten because their original keys cannot be recovered
 - Keyboard page still refreshes from the 1s shell timer when not visible
 - No DB backup / JSON export / clear-today (P13 shipped CSV export + clear-all only)
