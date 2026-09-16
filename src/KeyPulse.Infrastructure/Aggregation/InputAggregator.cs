@@ -13,6 +13,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
     private readonly IForegroundAppCache? _foreground;
     private readonly IExcludedAppList? _exclusions;
     private readonly IUserSettings? _settings;
+    private readonly InputDiagnostics? _inputDiagnostics;
     private readonly ShortcutTracker _shortcuts = new();
     private readonly object _gate = new();
     private StatisticsBuffer _active = new();
@@ -29,13 +30,15 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
         ILogger<InputAggregator> logger,
         IForegroundAppCache? foreground = null,
         IExcludedAppList? exclusions = null,
-        IUserSettings? settings = null)
+        IUserSettings? settings = null,
+        InputDiagnostics? inputDiagnostics = null)
     {
         _capture = capture;
         _logger = logger;
         _foreground = foreground;
         _exclusions = exclusions;
         _settings = settings;
+        _inputDiagnostics = inputDiagnostics;
         _capture.InputReceived += OnInputReceived;
         if (_foreground is not null)
         {
@@ -98,6 +101,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             if (inputEvent is KeyPressedEvent key)
             {
                 var shortcut = _shortcuts.Process(key);
+                _inputDiagnostics?.RecordShortcutDecision(key, shortcut);
                 if (!key.IsKeyDown)
                 {
                     return;

@@ -1,4 +1,5 @@
 using KeyPulse.Core.Events;
+using KeyPulse.Core.Models;
 
 namespace KeyPulse.Infrastructure.Input;
 
@@ -8,7 +9,12 @@ public sealed class RawKeyboardParser
     private const ushort KeyboardOverrunMakeCode = 0xFF;
     private const ushort UnmappedVirtualKey = 0xFF;
 
-    public KeyPressedEvent? TryParse(ushort virtualKey, ushort flags, ushort makeCode, DateTimeOffset timestamp)
+    public KeyPressedEvent? TryParse(
+        ushort virtualKey,
+        ushort flags,
+        ushort makeCode,
+        DateTimeOffset timestamp,
+        KeyboardModifiers observedModifiers = KeyboardModifiers.None)
     {
         if (makeCode == KeyboardOverrunMakeCode || virtualKey > UnmappedVirtualKey)
         {
@@ -30,7 +36,12 @@ public sealed class RawKeyboardParser
         {
             Timestamp = timestamp,
             Key = key,
-            IsKeyDown = (flags & KeyBreak) == 0
+            IsKeyDown = (flags & KeyBreak) == 0,
+            ObservedModifiers = observedModifiers,
+            RecoveredFromScanCode = virtualKey == UnmappedVirtualKey,
+            VirtualKey = virtualKey,
+            ScanCode = makeCode,
+            RawFlags = flags
         };
     }
 }

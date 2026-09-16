@@ -11,6 +11,7 @@ public sealed class RawInputService : IInputCapture, IDisposable
     private readonly RawKeyboardParser _keyboardParser;
     private readonly RawMouseParser _mouseParser;
     private readonly DisplayLayoutProvider _displayLayout;
+    private readonly InputDiagnostics _diagnostics;
     private readonly uint _headerSize = (uint)Marshal.SizeOf<RAWINPUTHEADER>();
     private readonly List<InputEvent> _mouseBuffer = new(8);
     private readonly object _gate = new();
@@ -27,12 +28,14 @@ public sealed class RawInputService : IInputCapture, IDisposable
         ILogger<RawInputService> logger,
         RawKeyboardParser keyboardParser,
         RawMouseParser mouseParser,
-        DisplayLayoutProvider displayLayout)
+        DisplayLayoutProvider displayLayout,
+        InputDiagnostics diagnostics)
     {
         _logger = logger;
         _keyboardParser = keyboardParser;
         _mouseParser = mouseParser;
         _displayLayout = displayLayout;
+        _diagnostics = diagnostics;
     }
 
     public event EventHandler<InputEvent>? InputReceived;
@@ -283,7 +286,20 @@ public sealed class RawInputService : IInputCapture, IDisposable
         if (header.dwType == RawInputNativeMethods.RIM_TYPEKEYBOARD)
         {
             var keyboard = Marshal.PtrToStructure<RAWKEYBOARD>(IntPtr.Add(_buffer, (int)_headerSize));
-            var parsed = _keyboardParser.TryParse(keyboard.VKey, keyboard.Flags, keyboard.MakeCode, timestamp);
+            var modifiers = WindowsKeyboardState.Capture();
+            var parsed = _keyboardParser.TryParse(
+                keyboard.VKey,
+                keyboard.Flags,
+                keyboard.MakeCode,
+                timestamp,
+                modifiers);
+            _diagnostics.RecordKeyboard(
+                timestamp,
+                keyboard.VKey,
+                keyboard.MakeCode,
+                keyboard.Flags,
+                modifiers,
+                parsed);
             if (parsed is not null)
             {
                 InputReceived?.Invoke(this, parsed);

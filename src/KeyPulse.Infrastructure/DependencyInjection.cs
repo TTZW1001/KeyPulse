@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddSingleton<IExcludedAppList, ExcludedAppList>();
         services.AddSingleton<RawKeyboardParser>();
         services.AddSingleton<RawMouseParser>();
+        services.AddSingleton<InputDiagnostics>();
         services.AddSingleton<DisplayLayoutProvider>();
         services.AddSingleton<IInputCapture, RawInputService>();
         services.AddSingleton<IForegroundProcessNative, WindowsForegroundProcessNative>();

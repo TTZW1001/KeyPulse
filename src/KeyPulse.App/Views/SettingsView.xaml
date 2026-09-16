@@ -1,6 +1,9 @@
 <UserControl x:Class="KeyPulse.App.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
     <ScrollViewer Style="{StaticResource PageScrollViewer}">
         <StackPanel MaxWidth="640" HorizontalAlignment="Left">
             <TextBlock Text="常规" Style="{StaticResource SectionTitleText}"/>
@@ -53,6 +56,47 @@
                        Style="{StaticResource SecondaryText}" Margin="22,0,0,8" TextWrapping="Wrap"/>
             <Button Content="清除位置数据" Command="{Binding ClearPositionDataCommand}"
                     HorizontalAlignment="Left" AutomationProperties.AutomationId="ClearPositionDataButton"/>
+
+            <TextBlock Text="输入诊断" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
+            <Border Style="{StaticResource SectionDivider}"/>
+            <CheckBox Content="临时显示原始键盘事件"
+                      IsChecked="{Binding InputDiagnosticsEnabled, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="InputDiagnosticsEnabled"/>
+            <TextBlock Text="仅在内存显示最近 16 条键名、键码和修饰键状态；不写数据库、不写日志，关闭后立即清空。测试时请勿输入密码。"
+                       Style="{StaticResource SecondaryText}" Margin="22,0,0,8" TextWrapping="Wrap"/>
+            <Border Visibility="{Binding InputDiagnosticsEnabled, Converter={StaticResource BoolToVis}}"
+                    Background="{DynamicResource ControlBackgroundBrush}"
+                    BorderBrush="{DynamicResource ControlBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12"
+                    Margin="0,4,0,0">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,8">
+                        <Button DockPanel.Dock="Right"
+                                Content="清空"
+                                Style="{StaticResource QuietButton}"
+                                Command="{Binding ClearInputDiagnosticsCommand}"
+                                AutomationProperties.AutomationId="ClearInputDiagnosticsButton"/>
+                        <TextBlock Text="最新事件在上方"
+                                   Style="{StaticResource SecondaryText}"
+                                   VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding InputDiagnosticRows}"
+                                  AutomationProperties.AutomationId="InputDiagnosticRows">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           FontFamily="Consolas"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,2"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
 
             <TextBlock Text="排除应用" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>

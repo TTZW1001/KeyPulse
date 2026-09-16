@@ -61,6 +61,9 @@ internal static class RawInputNativeMethods
     [DllImport("user32.dll")]
     public static extern int GetSystemMetrics(int index);
 
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int virtualKey);
+
     public delegate bool MonitorEnumProc(IntPtr monitor, IntPtr hdc, ref RECT rect, IntPtr data);
 
     [DllImport("user32.dll")]

@@ -50,6 +50,59 @@ public sealed class V11FeatureTests
     }
 
     [Fact]
+    public void ShortcutTracker_UsesObservedCtrl_WhenHookHidesModifierPacket()
+    {
+        var tracker = new ShortcutTracker();
+        var q = Key("Q", true) with { ObservedModifiers = KeyboardModifiers.Ctrl };
+
+        Assert.Equal("Ctrl+Q", tracker.Process(q));
+    }
+
+    [Fact]
+    public void ShortcutTracker_AllowsRecentCtrlOnlyForRecoveredHotkeyKey()
+    {
+        var tracker = new ShortcutTracker();
+        var start = DateTimeOffset.UnixEpoch;
+        tracker.Process(Key("LeftCtrl", true) with { Timestamp = start });
+        tracker.Process(Key("LeftCtrl", false) with { Timestamp = start.AddMilliseconds(40) });
+
+        var recovered = Key("Q", true) with
+        {
+            Timestamp = start.AddMilliseconds(100),
+            RecoveredFromScanCode = true
+        };
+        Assert.Equal("Ctrl+Q", tracker.Process(recovered));
+
+        tracker.Reset();
+        tracker.Process(Key("LeftCtrl", true) with { Timestamp = start });
+        tracker.Process(Key("LeftCtrl", false) with { Timestamp = start.AddMilliseconds(40) });
+        Assert.Null(tracker.Process(Key("Q", true) with { Timestamp = start.AddMilliseconds(100) }));
+    }
+
+    [Fact]
+    public void InputDiagnostics_IsOptInMemoryOnlyAndClearsOnDisable()
+    {
+        var diagnostics = new InputDiagnostics();
+        var parsed = Key("Q", true) with
+        {
+            VirtualKey = 0xFF,
+            ScanCode = 0x10,
+            RecoveredFromScanCode = true
+        };
+
+        diagnostics.RecordKeyboard(DateTimeOffset.UnixEpoch, 0xFF, 0x10, 0, KeyboardModifiers.Ctrl, parsed);
+        Assert.Empty(diagnostics.Snapshot());
+
+        diagnostics.SetEnabled(true);
+        diagnostics.RecordKeyboard(DateTimeOffset.UnixEpoch, 0xFF, 0x10, 0, KeyboardModifiers.Ctrl, parsed);
+        Assert.Contains("Q", Assert.Single(diagnostics.Snapshot()), StringComparison.Ordinal);
+        Assert.Contains("Ctrl", Assert.Single(diagnostics.Snapshot()), StringComparison.Ordinal);
+
+        diagnostics.SetEnabled(false);
+        Assert.Empty(diagnostics.Snapshot());
+    }
+
+    [Fact]
     public void KeyboardPresets_SeparateMainDigitsFromNumpad()
     {
         var compact = KeyboardLayoutDefinition.Get(KeyboardLayoutKind.CompactLaptop);

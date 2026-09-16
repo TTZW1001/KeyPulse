@@ -4,7 +4,9 @@ using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
+using KeyPulse.Infrastructure.Input;
 using KeyPulse.Infrastructure.Persistence;
+using System.Windows.Threading;
 using WpfMessageBox = System.Windows.MessageBox;
 
 namespace KeyPulse.App.ViewModels;
@@ -19,6 +21,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IFlushService _flush;
     private readonly IStatisticsExport _export;
     private readonly IUserSettings _settings;
+    private readonly InputDiagnostics _inputDiagnostics;
+    private readonly Dispatcher _dispatcher;
     private readonly object _gate = new();
     private bool _busy;
 
@@ -29,7 +33,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         IExcludedAppList exclusions,
         IFlushService flush,
         IStatisticsExport export,
-        IUserSettings settings)
+        IUserSettings settings,
+        InputDiagnostics inputDiagnostics)
     {
         _theme = theme;
         _startup = startup;
@@ -37,6 +42,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _flush = flush;
         _export = export;
         _settings = settings;
+        _inputDiagnostics = inputDiagnostics;
+        _dispatcher = Dispatcher.CurrentDispatcher;
         DataPath = paths.DataDirectory;
         DataRoot = paths.RootDirectory;
         ProductName = ProductInfo.Name;
@@ -44,7 +51,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         PrivacyNotice = ProductInfo.PrivacyNotice;
         _theme.Changed += OnThemeChanged;
         _exclusions.Changed += ReloadExcluded;
+        _inputDiagnostics.Changed += OnInputDiagnosticsChanged;
         ReloadExcluded();
+        ReloadInputDiagnostics();
     }
 
     public string DataPath { get; }
@@ -58,6 +67,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string PrivacyNotice { get; }
 
     public ObservableCollection<ExcludedAppRow> ExcludedApps { get; } = [];
+
+    public ObservableCollection<string> InputDiagnosticRows { get; } = [];
 
     [ObservableProperty]
     private string _newProcessName = string.Empty;
@@ -110,6 +121,17 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool InputDiagnosticsEnabled
+    {
+        get => _inputDiagnostics.Enabled;
+        set
+        {
+            if (_inputDiagnostics.Enabled == value) return;
+            _inputDiagnostics.SetEnabled(value);
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsLightTheme
     {
         get => _theme.Mode == ThemeMode.Light;
@@ -152,7 +174,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(StartMinimized));
         OnPropertyChanged(nameof(ShortcutStatsEnabled));
         OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
+        OnPropertyChanged(nameof(InputDiagnosticsEnabled));
         ReloadExcluded();
+        ReloadInputDiagnostics();
     }
 
     [RelayCommand]
@@ -294,12 +318,40 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void ClearInputDiagnostics() => _inputDiagnostics.Clear();
+
     private void ReloadExcluded()
     {
         ExcludedApps.Clear();
         foreach (var entry in _exclusions.Entries())
         {
             ExcludedApps.Add(new ExcludedAppRow(entry.ProcessName, entry.IsDefault));
+        }
+    }
+
+    private void OnInputDiagnosticsChanged()
+    {
+        if (_dispatcher.CheckAccess())
+        {
+            ReloadInputDiagnostics();
+            OnPropertyChanged(nameof(InputDiagnosticsEnabled));
+            return;
+        }
+
+        _dispatcher.BeginInvoke(() =>
+        {
+            ReloadInputDiagnostics();
+            OnPropertyChanged(nameof(InputDiagnosticsEnabled));
+        });
+    }
+
+    private void ReloadInputDiagnostics()
+    {
+        InputDiagnosticRows.Clear();
+        foreach (var entry in _inputDiagnostics.Snapshot())
+        {
+            InputDiagnosticRows.Add(entry);
         }
     }
 
