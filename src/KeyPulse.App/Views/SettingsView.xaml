@@ -1,8 +1,7 @@
 <UserControl x:Class="KeyPulse.App.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer Style="{StaticResource PageScrollViewer}">
         <StackPanel MaxWidth="640" HorizontalAlignment="Left">
             <TextBlock Text="常规" Style="{StaticResource SectionTitleText}"/>
             <Border Style="{StaticResource SectionDivider}"/>
@@ -116,7 +115,7 @@
             <TextBox Text="{Binding DataPath, Mode=OneWay}"
                      Style="{StaticResource ReadOnlyPathBox}"
                      AutomationProperties.AutomationId="DataPathText"/>
-            <TextBlock Text="约每 60 秒写入磁盘。暂不支持按 AFK 自动暂停。"
+            <TextBlock Text="约每 5 分钟写入磁盘；退出、休眠和导出前会立即保存。暂不支持按 AFK 自动暂停。"
                        Style="{StaticResource SecondaryText}"
                        Margin="0,8,0,12"/>
 

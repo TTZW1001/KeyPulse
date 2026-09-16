@@ -141,6 +141,18 @@ public sealed partial class KeyboardViewModel : ObservableObject
         }
     }
 
+    public bool IsLast30DaysRange
+    {
+        get => _range == KeyboardRange.Last30Days;
+        set { if (value) SetRange(KeyboardRange.Last30Days); }
+    }
+
+    public bool IsAllRange
+    {
+        get => _range == KeyboardRange.All;
+        set { if (value) SetRange(KeyboardRange.All); }
+    }
+
     public void Refresh() => _ = RefreshAsync();
 
     public async Task RefreshAsync()
@@ -158,7 +170,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
         try
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var from = _range == KeyboardRange.Today ? today : today.AddDays(-6);
+            var from = _range.GetStartDate(today);
             var keysTask = _query.GetKeyCountsAsync(from, today);
             var shortcutsTask = _query.GetShortcutCountsAsync(from, today);
             await Task.WhenAll(keysTask, shortcutsTask).ConfigureAwait(false);
@@ -187,6 +199,8 @@ public sealed partial class KeyboardViewModel : ObservableObject
         _range = range;
         OnPropertyChanged(nameof(IsTodayRange));
         OnPropertyChanged(nameof(IsLast7DaysRange));
+        OnPropertyChanged(nameof(IsLast30DaysRange));
+        OnPropertyChanged(nameof(IsAllRange));
         Refresh();
     }
 
@@ -230,7 +244,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
                      .ThenBy(p => p.Key, StringComparer.Ordinal)
                      .Take(12))
         {
-            OtherKeys.Add(new OtherKeyRow(pair.Key, pair.Value.ToString("N0", culture)));
+            OtherKeys.Add(new OtherKeyRow(FriendlyKeyName(pair.Key), pair.Value.ToString("N0", culture)));
         }
 
         TopKeys.Clear();
@@ -290,8 +304,16 @@ public sealed partial class KeyboardViewModel : ObservableObject
         brush.Freeze();
         return brush;
     }
+
+    private static string FriendlyKeyName(string keyCode) =>
+        keyCode.StartsWith("VK_", StringComparison.Ordinal)
+            ? $"未识别功能键（{keyCode}）"
+            : keyCode;
 }
 
 public sealed record OtherKeyRow(string Name, string CountText);
 
-public sealed record KeyboardLayoutOption(KeyboardLayoutKind Kind, string DisplayName);
+public sealed record KeyboardLayoutOption(KeyboardLayoutKind Kind, string DisplayName)
+{
+    public override string ToString() => DisplayName;
+}

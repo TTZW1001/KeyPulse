@@ -130,12 +130,20 @@ public static class KeyboardLayoutDefinition
 
     private static IReadOnlyList<KeyboardKeyDefinition> BuildCompact()
     {
-        var keys = Keys.Where(key => key.X < 15).ToList();
-        keys.Add(K("Delete", "Del", 0, 14.25, 0, 0.75));
-        keys.Add(K("ArrowUp", "↑", 4, 13.25, 4.4, 0.75));
-        keys.Add(K("ArrowLeft", "←", 5, 12.5, 5.4, 0.75));
-        keys.Add(K("ArrowDown", "↓", 5, 13.25, 5.4, 0.75));
-        keys.Add(K("ArrowRight", "→", 5, 14, 5.4, 0.75));
+        var omitted = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "RightShift", "RightWin", "Menu", "RightCtrl"
+        };
+        var keys = Keys.Where(key => key.X < 15 && !omitted.Contains(key.KeyCode)).ToList();
+
+        // A conventional 75% laptop cluster: compact modifiers and an independent inverted-T arrow block.
+        keys.Add(K("Delete", "Del", 0, 14.75, 0, 0.9));
+        keys.Add(K("RightShift", "Shift", 4, 12.25, 4.4, 1.5));
+        keys.Add(K("ArrowUp", "↑", 4, 14, 4.4, 0.8));
+        keys.Add(K("RightCtrl", "Ctrl", 5, 11.5, 5.4, 1.25));
+        keys.Add(K("ArrowLeft", "←", 5, 13.1, 5.4, 0.8));
+        keys.Add(K("ArrowDown", "↓", 5, 14, 5.4, 0.8));
+        keys.Add(K("ArrowRight", "→", 5, 14.9, 5.4, 0.8));
         return keys;
     }
 

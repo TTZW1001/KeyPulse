@@ -329,4 +329,7 @@ public sealed partial class TrendsViewModel : ObservableObject
     }
 }
 
-public sealed record TrendRangeOption(TrendRangeKind Kind, string Title);
+public sealed record TrendRangeOption(TrendRangeKind Kind, string Title)
+{
+    public override string ToString() => Title;
+}

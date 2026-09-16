@@ -42,6 +42,38 @@ public sealed class V11FeatureTests
     }
 
     [Fact]
+    public void CompactKeyboard_UsesCleanLaptopModifierAndArrowLayout()
+    {
+        var keys = KeyboardLayoutDefinition.Get(KeyboardLayoutKind.CompactLaptop).Keys;
+
+        Assert.DoesNotContain(keys, key => key.KeyCode is "RightWin" or "Menu");
+        Assert.Contains(keys, key => key.KeyCode == "RightAlt");
+        Assert.Contains(keys, key => key.KeyCode == "RightCtrl");
+        Assert.Contains(keys, key => key.KeyCode == "ArrowUp" && key.Y <
+            keys.Single(item => item.KeyCode == "ArrowDown").Y);
+
+        for (var i = 0; i < keys.Count; i++)
+        for (var j = i + 1; j < keys.Count; j++)
+        {
+            var left = keys[i];
+            var right = keys[j];
+            var overlaps = left.X < right.X + right.Width && left.X + left.Width > right.X &&
+                           left.Y < right.Y + right.Height && left.Y + left.Height > right.Y;
+            Assert.False(overlaps, $"{left.KeyCode} overlaps {right.KeyCode}");
+        }
+    }
+
+    [Fact]
+    public void StatisticsRanges_ResolveInclusiveStartDates()
+    {
+        var today = new DateOnly(2026, 9, 16);
+        Assert.Equal(today, KeyboardRange.Today.GetStartDate(today));
+        Assert.Equal(new DateOnly(2026, 9, 10), KeyboardRange.Last7Days.GetStartDate(today));
+        Assert.Equal(new DateOnly(2026, 8, 18), KeyboardRange.Last30Days.GetStartDate(today));
+        Assert.Equal(DateOnly.MinValue, KeyboardRange.All.GetStartDate(today));
+    }
+
+    [Fact]
     public void CursorDistance_UsesScreenCoordinates_AndPositionDataRequiresOptIn()
     {
         var layout = Layout();

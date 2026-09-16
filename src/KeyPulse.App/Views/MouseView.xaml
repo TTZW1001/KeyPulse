@@ -3,12 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
     <UserControl.Resources><BooleanToVisibilityConverter x:Key="BoolToVis"/></UserControl.Resources>
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <ScrollViewer Style="{StaticResource PageScrollViewer}">
         <StackPanel>
             <DockPanel Margin="0,0,0,18">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <RadioButton Content="今天" GroupName="MouseRange" IsChecked="{Binding IsTodayRange, Mode=TwoWay}"/>
                     <RadioButton Content="最近 7 天" GroupName="MouseRange" IsChecked="{Binding IsLast7DaysRange, Mode=TwoWay}"/>
+                    <RadioButton Content="最近 30 天" GroupName="MouseRange" IsChecked="{Binding IsLast30DaysRange, Mode=TwoWay}"/>
+                    <RadioButton Content="全部" GroupName="MouseRange" Margin="0" IsChecked="{Binding IsAllRange, Mode=TwoWay}"/>
                 </StackPanel>
                 <TextBlock Text="鼠标使用" Style="{StaticResource SecondaryText}"/>
             </DockPanel>
@@ -76,7 +78,19 @@
                 </StackPanel>
             </Grid>
 
-            <TextBlock Text="屏幕位置热力图" Style="{StaticResource SectionTitleText}"/>
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <TextBlock Text="屏幕位置热力图" Style="{StaticResource SectionTitleText}" VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" Margin="0,8,0,0">
+                    <RadioButton Content="今天" GroupName="HeatmapRange" IsChecked="{Binding IsHeatmapTodayRange, Mode=TwoWay}"/>
+                    <RadioButton Content="最近 7 天" GroupName="HeatmapRange" IsChecked="{Binding IsHeatmapLast7DaysRange, Mode=TwoWay}"/>
+                    <RadioButton Content="最近 30 天" GroupName="HeatmapRange" IsChecked="{Binding IsHeatmapLast30DaysRange, Mode=TwoWay}"/>
+                    <RadioButton Content="全部" GroupName="HeatmapRange" IsChecked="{Binding IsHeatmapAllRange, Mode=TwoWay}"/>
+                    <Button Content="导出 PNG" Command="{Binding ExportHeatmapCommand}" Margin="4,0,0,0"
+                            AutomationProperties.AutomationId="ExportHeatmapButton"/>
+                </StackPanel>
+            </Grid>
             <Border Style="{StaticResource SectionDivider}"/>
             <CheckBox Content="记录屏幕位置热力图"
                       IsChecked="{Binding ScreenPositionStatsEnabled, Mode=TwoWay}"/>
@@ -88,6 +102,7 @@
                 <StackPanel><TextBlock Text="像素覆盖" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding CoverageHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
             </UniformGrid>
             <TextBlock Text="{Binding CoverageText}" Style="{StaticResource SecondaryText}" Margin="0,2,0,20"/>
+            <TextBlock Text="{Binding ExportStatus}" Style="{StaticResource SecondaryText}" Margin="0,-14,0,20"/>
 
             <TextBlock Text="最近 7 天鼠标活动" Style="{StaticResource SectionTitleText}"/>
             <Border Style="{StaticResource SectionDivider}"/>

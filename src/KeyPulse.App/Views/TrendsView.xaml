@@ -8,7 +8,7 @@
     <DockPanel>
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
             <ComboBox DockPanel.Dock="Right"
-                      Width="128"
+                      Width="168"
                       ItemsSource="{Binding RangeOptions}"
                       SelectedItem="{Binding SelectedRange}"
                       DisplayMemberPath="Title"
@@ -45,8 +45,7 @@
                    Margin="0,0,0,8"
                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}"
                    AutomationProperties.AutomationId="TrendLoading"/>
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer Style="{StaticResource PageScrollViewer}">
             <StackPanel>
                 <TextBlock Text="键盘按键趋势" Style="{StaticResource SectionTitleText}"/>
                 <Border Style="{StaticResource SectionDivider}"/>

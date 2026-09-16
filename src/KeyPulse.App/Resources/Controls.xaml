@@ -199,6 +199,8 @@
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/></Grid.ColumnDefinitions>
                                     <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
                                                       ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                      ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                                       VerticalAlignment="Center"/>
                                     <Path Grid.Column="1" Data="M 1 3 L 5 7 L 9 3"
                                           Stroke="{DynamicResource SecondaryTextBrush}" StrokeThickness="1.5"
@@ -230,6 +232,13 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="PageScrollViewer" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="PanningMode" Value="VerticalOnly"/>
+        <Setter Property="Focusable" Value="True"/>
     </Style>
 
     <Style x:Key="SettingInputBox" TargetType="TextBox">

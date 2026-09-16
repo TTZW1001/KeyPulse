@@ -1,7 +1,10 @@
 using System.Globalization;
+using System.IO;
+using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
@@ -32,6 +35,7 @@ public sealed partial class MouseViewModel : ObservableObject
     private bool _chartsStale = true;
     private DateOnly _chartsDate;
     private KeyboardRange _range = KeyboardRange.Last7Days;
+    private KeyboardRange _heatmapRange = KeyboardRange.Last7Days;
 
     public MouseViewModel(
         IMouseQuery query,
@@ -94,6 +98,7 @@ public sealed partial class MouseViewModel : ObservableObject
     [ObservableProperty] private BitmapSource? _trajectoryHeatmapImage;
     [ObservableProperty] private BitmapSource? _coverageHeatmapImage;
     [ObservableProperty] private string _coverageText = "暂无轨迹数据";
+    [ObservableProperty] private string _exportStatus = string.Empty;
 
     public bool ScreenPositionStatsEnabled
     {
@@ -131,6 +136,42 @@ public sealed partial class MouseViewModel : ObservableObject
         }
     }
 
+    public bool IsLast30DaysRange
+    {
+        get => _range == KeyboardRange.Last30Days;
+        set { if (value) SetRange(KeyboardRange.Last30Days); }
+    }
+
+    public bool IsAllRange
+    {
+        get => _range == KeyboardRange.All;
+        set { if (value) SetRange(KeyboardRange.All); }
+    }
+
+    public bool IsHeatmapTodayRange
+    {
+        get => _heatmapRange == KeyboardRange.Today;
+        set { if (value) SetHeatmapRange(KeyboardRange.Today); }
+    }
+
+    public bool IsHeatmapLast7DaysRange
+    {
+        get => _heatmapRange == KeyboardRange.Last7Days;
+        set { if (value) SetHeatmapRange(KeyboardRange.Last7Days); }
+    }
+
+    public bool IsHeatmapLast30DaysRange
+    {
+        get => _heatmapRange == KeyboardRange.Last30Days;
+        set { if (value) SetHeatmapRange(KeyboardRange.Last30Days); }
+    }
+
+    public bool IsHeatmapAllRange
+    {
+        get => _heatmapRange == KeyboardRange.All;
+        set { if (value) SetHeatmapRange(KeyboardRange.All); }
+    }
+
     public void Refresh()
     {
         OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
@@ -152,9 +193,8 @@ public sealed partial class MouseViewModel : ObservableObject
         try
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var from = _range == KeyboardRange.Today ? today : today.AddDays(-6);
-            var totals = await _query.GetMouseTotalsAsync(from, today).ConfigureAwait(false);
-            var pointer = await _pointerQuery.GetAsync(from, today).ConfigureAwait(false);
+            var totals = await _query.GetMouseTotalsAsync(_range.GetStartDate(today), today).ConfigureAwait(false);
+            var pointer = await _pointerQuery.GetAsync(_heatmapRange.GetStartDate(today), today).ConfigureAwait(false);
             var needChart = _chartsStale || _chartsDate != today;
             IReadOnlyList<MouseDayPoint>? days = null;
             if (needChart)
@@ -198,6 +238,19 @@ public sealed partial class MouseViewModel : ObservableObject
         _chartsStale = true;
         OnPropertyChanged(nameof(IsTodayRange));
         OnPropertyChanged(nameof(IsLast7DaysRange));
+        OnPropertyChanged(nameof(IsLast30DaysRange));
+        OnPropertyChanged(nameof(IsAllRange));
+        Refresh();
+    }
+
+    private void SetHeatmapRange(KeyboardRange range)
+    {
+        if (_heatmapRange == range) return;
+        _heatmapRange = range;
+        OnPropertyChanged(nameof(IsHeatmapTodayRange));
+        OnPropertyChanged(nameof(IsHeatmapLast7DaysRange));
+        OnPropertyChanged(nameof(IsHeatmapLast30DaysRange));
+        OnPropertyChanged(nameof(IsHeatmapAllRange));
         Refresh();
     }
 
@@ -264,7 +317,7 @@ public sealed partial class MouseViewModel : ObservableObject
             ClickHeatmapImage = null;
             TrajectoryHeatmapImage = null;
             CoverageHeatmapImage = null;
-            CoverageText = "暂无轨迹数据";
+            CoverageText = "累计像素覆盖（全部时间）：暂无轨迹数据";
             return;
         }
 
@@ -272,8 +325,112 @@ public sealed partial class MouseViewModel : ObservableObject
         TrajectoryHeatmapImage = RenderHeatmap(result, HeatmapMode.Trajectory);
         CoverageHeatmapImage = RenderHeatmap(result, HeatmapMode.Coverage);
         var percent = result.TotalPixels <= 0 ? 0 : result.VisitedPixels * 100.0 / result.TotalPixels;
-        CoverageText = $"光标中心路径已经过 {percent:0.00}% · 未经过 {100 - percent:0.00}%";
+        CoverageText = $"累计像素覆盖（全部时间）：光标中心路径已经过 {percent:0.00}% · 未经过 {100 - percent:0.00}%";
     }
+
+    [RelayCommand]
+    private async Task ExportHeatmapAsync()
+    {
+        try
+        {
+            ExportStatus = "正在准备图片…";
+            await _flush.FlushNowAsync().ConfigureAwait(true);
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            var result = await _pointerQuery.GetAsync(_heatmapRange.GetStartDate(today), today).ConfigureAwait(true);
+            if (result is null)
+            {
+                ExportStatus = "暂无可导出的热力图数据";
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "导出屏幕位置热力图",
+                Filter = "PNG 图片 (*.png)|*.png",
+                FileName = $"KeyPulse-屏幕热力图-{DateTime.Now:yyyyMMdd-HHmm}.png",
+                AddExtension = true,
+                DefaultExt = ".png"
+            };
+            if (dialog.ShowDialog() != true)
+            {
+                ExportStatus = string.Empty;
+                return;
+            }
+
+            SaveCombinedHeatmap(result, dialog.FileName, RangeTitle(_heatmapRange));
+            ExportStatus = $"已导出：{Path.GetFileName(dialog.FileName)}";
+        }
+        catch (Exception ex)
+        {
+            ExportStatus = $"导出失败：{ex.Message}";
+        }
+    }
+
+    private static void SaveCombinedHeatmap(PointerHeatmapResult result, string path, string rangeTitle)
+    {
+        const int width = 1800;
+        const int height = 920;
+        const int margin = 72;
+        const int gap = 34;
+        var panelWidth = (width - (margin * 2) - (gap * 2)) / 3;
+        var visual = new Media.DrawingVisual();
+        using (var drawing = visual.RenderOpen())
+        {
+            drawing.DrawRectangle(Media.Brushes.White, null, new Rect(0, 0, width, height));
+            DrawText(drawing, "KeyPulse 屏幕位置热力图", 40, 72, 52, Media.Brushes.Black, true);
+            DrawText(drawing, $"范围：{rangeTitle}    导出时间：{DateTime.Now:yyyy-MM-dd HH:mm}", 22, 72, 112, Media.Brushes.DimGray);
+            var monitorText = string.Join("；", result.Layout.Monitors.Select(m =>
+                $"{(m.IsPrimary ? "主屏" : m.Id)} {m.Width}×{m.Height} @ ({m.Left},{m.Top})"));
+            DrawText(drawing, $"显示器：{monitorText}", 20, 72, 148, Media.Brushes.DimGray);
+
+            var modes = new[]
+            {
+                ("点击位置", HeatmapMode.Clicks),
+                ("鼠标轨迹", HeatmapMode.Trajectory),
+                ("累计像素覆盖（全部时间）", HeatmapMode.Coverage)
+            };
+            for (var i = 0; i < modes.Length; i++)
+            {
+                var x = margin + i * (panelWidth + gap);
+                DrawText(drawing, modes[i].Item1, 24, x, 210, Media.Brushes.Black, true);
+                drawing.DrawRectangle(Media.Brushes.WhiteSmoke, new Media.Pen(Media.Brushes.LightGray, 2),
+                    new Rect(x, 255, panelWidth, 460));
+                var image = RenderHeatmap(result, modes[i].Item2);
+                var imageHeight = Math.Min(420, panelWidth * image.PixelHeight / (double)image.PixelWidth);
+                drawing.DrawImage(image, new Rect(x + 10, 275 + (420 - imageHeight) / 2, panelWidth - 20, imageHeight));
+            }
+
+            var percent = result.TotalPixels <= 0 ? 0 : result.VisitedPixels * 100.0 / result.TotalPixels;
+            DrawText(drawing, $"累计覆盖率：{percent:0.00}%    未经过：{100 - percent:0.00}%", 24, 72, 770, Media.Brushes.Black, true);
+            DrawText(drawing, "仅包含本机坐标统计；不包含屏幕截图、窗口名称或输入内容。", 20, 72, 820, Media.Brushes.DimGray);
+        }
+
+        var bitmap = new RenderTargetBitmap(width, height, 144, 144, Media.PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
+    }
+
+    private static void DrawText(Media.DrawingContext drawing, string text, double size, double x, double y,
+        Media.Brush brush, bool bold = false)
+    {
+        var formatted = new Media.FormattedText(text, CultureInfo.GetCultureInfo("zh-CN"), System.Windows.FlowDirection.LeftToRight,
+            new Media.Typeface(new Media.FontFamily("Microsoft YaHei UI"), System.Windows.FontStyles.Normal,
+                bold ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal, System.Windows.FontStretches.Normal),
+            size, brush, 1.5);
+        drawing.DrawText(formatted, new System.Windows.Point(x, y));
+    }
+
+    private static string RangeTitle(KeyboardRange range) => range switch
+    {
+        KeyboardRange.Today => "今天",
+        KeyboardRange.Last7Days => "最近 7 天",
+        KeyboardRange.Last30Days => "最近 30 天",
+        KeyboardRange.All => "全部",
+        _ => "最近 7 天"
+    };
 
     private void BuildChart(IReadOnlyList<MouseDayPoint> days)
     {

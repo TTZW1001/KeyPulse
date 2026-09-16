@@ -17,7 +17,7 @@ Date: 2026-09-15
 
 ## Flush
 
-- Default interval: 60 seconds (`PersistenceOptions.FlushInterval`)
+- Default interval: 5 minutes (`PersistenceOptions.FlushInterval`); exit, suspend, and export still flush immediately.
 - Exit: stop capture → `FlushNow` → shutdown
 - UPSERT is `existing + excluded` (increment), never overwrite totals
 - Dates come from the batch (event local dates), not flush clock
