@@ -60,7 +60,17 @@
                                 Background="Transparent"
                                 AutomationProperties.AutomationId="TrendChart"/>
 
-            <TextBlock Text="今日活跃时段" Style="{StaticResource SectionTitleText}" Margin="0,16,0,0"/>
+            <DockPanel Margin="0,16,0,0">
+                <TextBlock DockPanel.Dock="Left" Text="今日活跃时段" Style="{StaticResource SectionTitleText}"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="8" Height="8" Fill="#4E6E9E" Margin="0,0,6,0"/>
+                    <TextBlock Text="键盘" Style="{StaticResource SecondaryText}" Margin="0,0,16,0"/>
+                    <Ellipse Width="8" Height="8" Fill="#5F9998" Margin="0,0,6,0"/>
+                    <TextBlock Text="点击" Style="{StaticResource SecondaryText}" Margin="0,0,16,0"/>
+                    <Ellipse Width="8" Height="8" Fill="#A7B3C5" Margin="0,0,6,0"/>
+                    <TextBlock Text="滚轮" Style="{StaticResource SecondaryText}"/>
+                </StackPanel>
+            </DockPanel>
             <Border Style="{StaticResource SectionDivider}"/>
             <lvc:CartesianChart Height="160"
                                 Margin="0,0,0,8"

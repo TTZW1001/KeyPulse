@@ -16,4 +16,16 @@ public sealed record DailyTrendPoint(
     long MouseClickCount,
     long WheelEventCount);
 
-public sealed record HourlyPoint(int Hour, long ActivityCount);
+public sealed record HourlyPoint(
+    int Hour,
+    long KeyPressCount,
+    long MouseClickCount,
+    long WheelEventCount)
+{
+    public HourlyPoint(int hour, long activityCount)
+        : this(hour, activityCount, 0, 0)
+    {
+    }
+
+    public long ActivityCount => KeyPressCount + MouseClickCount + WheelEventCount;
+}

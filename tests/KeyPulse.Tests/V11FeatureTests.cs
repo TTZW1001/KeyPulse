@@ -25,6 +25,30 @@ public sealed class V11FeatureTests
         Assert.Null(tracker.Process(Key("A", true)));
     }
 
+    [Theory]
+    [InlineData("LeftCtrl")]
+    [InlineData("RightCtrl")]
+    public void ShortcutTracker_RecordsPlainCtrlQ(string controlKey)
+    {
+        var tracker = new ShortcutTracker();
+        tracker.Process(Key(controlKey, true));
+
+        Assert.Equal("Ctrl+Q", tracker.Process(Key("Q", true)));
+    }
+
+    [Fact]
+    public void MaskedGlobalHotkey_IsRecoveredAndAggregatedAsCtrlQ()
+    {
+        var parser = new RawKeyboardParser();
+        using var aggregator = Create(new FakeSettings());
+        aggregator.Record(parser.TryParse(0x11, 0, 0x1D, DateTimeOffset.UnixEpoch)!);
+        aggregator.Record(parser.TryParse(0xFF, 0, 0x10, DateTimeOffset.UnixEpoch)!);
+
+        Assert.Equal(1, aggregator.CaptureSnapshot().ShortcutCounts["Ctrl+Q"]);
+        Assert.Equal(1, aggregator.CaptureSnapshot().KeyCounts["Q"]);
+        Assert.DoesNotContain("VK_FF", aggregator.CaptureSnapshot().KeyCounts.Keys);
+    }
+
     [Fact]
     public void KeyboardPresets_SeparateMainDigitsFromNumpad()
     {

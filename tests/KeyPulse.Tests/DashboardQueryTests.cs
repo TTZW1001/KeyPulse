@@ -121,6 +121,9 @@ public class DashboardQueryTests : IDisposable
         Assert.Equal(24, hours.Count);
         Assert.Equal(Enumerable.Range(0, 24), hours.Select(point => point.Hour));
         Assert.Equal(2, hours[12].ActivityCount);
+        Assert.Equal(1, hours[12].KeyPressCount);
+        Assert.Equal(1, hours[12].MouseClickCount);
+        Assert.Equal(0, hours[12].WheelEventCount);
         Assert.Equal(0, hours[0].ActivityCount);
     }
 
@@ -139,6 +142,20 @@ public class DashboardQueryTests : IDisposable
         Assert.Equal(24, hours.Count);
         Assert.All(days, point => Assert.Equal(0, point.KeyPressCount));
         Assert.All(hours, point => Assert.Equal(0, point.ActivityCount));
+    }
+
+    [Fact]
+    public async Task InvalidHistoricalKeyCodes_AreExcludedFromDashboardTotals()
+    {
+        using var aggregator = CreateAggregator();
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        aggregator.Record(Key("VK_FF"));
+        await _repository.FlushAsync(aggregator.SwapForFlush());
+
+        var result = await new DashboardQueryService(_repository, aggregator).GetTodayAsync(today);
+
+        Assert.Equal(0, result.KeyPressCount);
+        Assert.Null(result.TopKey);
     }
 
     private static InputAggregator CreateAggregator() =>

@@ -25,6 +25,26 @@ public class RawKeyboardParserTests
         Assert.False(parsed!.IsKeyDown);
         Assert.Equal("A", parsed.Key.Name);
     }
+
+    [Fact]
+    public void RecoversMaskedHotkey_FromValidScanCode()
+    {
+        var parsed = _parser.TryParse(0xFF, 0, 0x10, DateTimeOffset.UnixEpoch);
+
+        Assert.NotNull(parsed);
+        Assert.Equal("Q", parsed!.Key.Name);
+        Assert.True(parsed.IsKeyDown);
+    }
+
+    [Theory]
+    [InlineData(0x41, 0xFF)]
+    [InlineData(0xFF, 0xFF)]
+    [InlineData(0xFF, 0x00)]
+    [InlineData(0x0100, 0x10)]
+    public void IgnoresInvalidOrOverrunPackets(ushort virtualKey, ushort makeCode)
+    {
+        Assert.Null(_parser.TryParse(virtualKey, 0, makeCode, DateTimeOffset.UnixEpoch));
+    }
 }
 
 public class RawMouseParserTests

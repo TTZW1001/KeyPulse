@@ -1,4 +1,5 @@
 using KeyPulse.Core.Interfaces;
+using KeyPulse.Core.Models;
 using KeyPulse.Infrastructure.Persistence;
 
 namespace KeyPulse.Infrastructure.Query;
@@ -33,7 +34,7 @@ public sealed class KeyboardQueryService : IKeyboardQuery
         var keys = new Dictionary<string, long>(StringComparer.Ordinal);
         foreach (var row in persisted)
         {
-            if (row.Date < from || row.Date > to)
+            if (row.Date < from || row.Date > to || !KeyCode.IsValidStatisticName(row.KeyCode))
             {
                 continue;
             }
@@ -50,6 +51,11 @@ public sealed class KeyboardQueryService : IKeyboardQuery
 
             foreach (var pair in day.Value)
             {
+                if (!KeyCode.IsValidStatisticName(pair.Key))
+                {
+                    continue;
+                }
+
                 keys[pair.Key] = keys.GetValueOrDefault(pair.Key) + pair.Value;
             }
         }

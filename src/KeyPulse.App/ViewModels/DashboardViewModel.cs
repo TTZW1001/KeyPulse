@@ -17,6 +17,8 @@ public sealed partial class DashboardViewModel : ObservableObject
 {
     private static readonly SKColor Accent = new(0x4E, 0x6E, 0x9E);
     private static readonly SKColor AccentFill = new(0x4E, 0x6E, 0x9E, 0xC8);
+    private static readonly SKColor ClickFill = new(0x5F, 0x99, 0x98, 0xD8);
+    private static readonly SKColor WheelFill = new(0xA7, 0xB3, 0xC5, 0xE0);
 
     private readonly IDashboardQuery _query;
     private readonly IFlushService _flush;
@@ -159,14 +161,18 @@ public sealed partial class DashboardViewModel : ObservableObject
             }
         }
 
-        var hourValues = new long[24];
+        var hourKeys = new long[24];
+        var hourClicks = new long[24];
+        var hourWheels = new long[24];
         var hourLabels = new string[24];
         for (var hour = 0; hour < 24; hour++)
         {
             hourLabels[hour] = hour % 3 == 0 ? hour.ToString("00", CultureInfo.InvariantCulture) : string.Empty;
             if (hour < hours.Count)
             {
-                hourValues[hour] = hours[hour].ActivityCount;
+                hourKeys[hour] = hours[hour].KeyPressCount;
+                hourClicks[hour] = hours[hour].MouseClickCount;
+                hourWheels[hour] = hours[hour].WheelEventCount;
             }
         }
 
@@ -212,14 +218,32 @@ public sealed partial class DashboardViewModel : ObservableObject
 
         HourlySeries =
         [
-            new ColumnSeries<long>
+            new StackedColumnSeries<long>
             {
-                Name = "活动",
-                Values = hourValues,
+                Name = "键盘",
+                Values = hourKeys,
                 Fill = new SolidColorPaint(AccentFill),
                 Stroke = null,
-                MaxBarWidth = 16,
-                YToolTipLabelFormatter = FormatPoint
+                MaxBarWidth = 18,
+                YToolTipLabelFormatter = FormatHourlyPoint
+            },
+            new StackedColumnSeries<long>
+            {
+                Name = "鼠标点击",
+                Values = hourClicks,
+                Fill = new SolidColorPaint(ClickFill),
+                Stroke = null,
+                MaxBarWidth = 18,
+                YToolTipLabelFormatter = FormatHourlyPoint
+            },
+            new StackedColumnSeries<long>
+            {
+                Name = "滚轮",
+                Values = hourWheels,
+                Fill = new SolidColorPaint(WheelFill),
+                Stroke = null,
+                MaxBarWidth = 18,
+                YToolTipLabelFormatter = FormatHourlyPoint
             }
         ];
         HourlyXAxes =
@@ -228,6 +252,8 @@ public sealed partial class DashboardViewModel : ObservableObject
             {
                 Labels = hourLabels,
                 TextSize = 11,
+                MinStep = 1,
+                ForceStepToMin = true,
                 LabelsPaint = text,
                 SeparatorsPaint = new SolidColorPaint(SKColors.Transparent)
             }
@@ -262,6 +288,13 @@ public sealed partial class DashboardViewModel : ObservableObject
 
     private static string FormatPoint(ChartPoint point) =>
         point.Coordinate.PrimaryValue.ToString("N0", CultureInfo.CurrentCulture);
+
+    private static string FormatHourlyPoint(ChartPoint point)
+    {
+        var hour = Math.Clamp((int)Math.Round(point.Coordinate.SecondaryValue), 0, 23);
+        return $"{hour:00}:00–{hour:00}:59 · " +
+               point.Coordinate.PrimaryValue.ToString("N0", CultureInfo.CurrentCulture);
+    }
 
     private static string FormatDistance(double pixels)
     {

@@ -1,4 +1,5 @@
 using KeyPulse.Core.Interfaces;
+using KeyPulse.Core.Models;
 using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure.Persistence;
 
@@ -32,6 +33,11 @@ public sealed class DashboardQueryService : IDashboardQuery
         var keys = new Dictionary<string, long>(StringComparer.Ordinal);
         foreach (var row in persistedKeys)
         {
+            if (!KeyCode.IsValidStatisticName(row.KeyCode))
+            {
+                continue;
+            }
+
             keys[row.KeyCode] = keys.GetValueOrDefault(row.KeyCode) + row.PressCount;
         }
 
@@ -39,6 +45,11 @@ public sealed class DashboardQueryService : IDashboardQuery
         {
             foreach (var pair in snapKeys)
             {
+                if (!KeyCode.IsValidStatisticName(pair.Key))
+                {
+                    continue;
+                }
+
                 keys[pair.Key] = keys.GetValueOrDefault(pair.Key) + pair.Value;
             }
         }
@@ -136,12 +147,16 @@ public sealed class DashboardQueryService : IDashboardQuery
             cancellationToken).ConfigureAwait(false);
         var unflushed = _reader.CaptureUnflushed();
 
-        var hours = new long[24];
+        var keys = new long[24];
+        var clicks = new long[24];
+        var wheels = new long[24];
         foreach (var row in persisted)
         {
             if (row.Hour is >= 0 and <= 23)
             {
-                hours[row.Hour] += row.KeyPressCount + row.MouseClickCount + row.WheelEventCount;
+                keys[row.Hour] += row.KeyPressCount;
+                clicks[row.Hour] += row.MouseClickCount;
+                wheels[row.Hour] += row.WheelEventCount;
             }
         }
 
@@ -152,14 +167,15 @@ public sealed class DashboardQueryService : IDashboardQuery
                 continue;
             }
 
-            hours[pair.Key.Hour] +=
-                pair.Value.KeyPressCount + pair.Value.MouseClickCount + pair.Value.WheelEventCount;
+            keys[pair.Key.Hour] += pair.Value.KeyPressCount;
+            clicks[pair.Key.Hour] += pair.Value.MouseClickCount;
+            wheels[pair.Key.Hour] += pair.Value.WheelEventCount;
         }
 
         var points = new HourlyPoint[24];
         for (var hour = 0; hour < 24; hour++)
         {
-            points[hour] = new HourlyPoint(hour, hours[hour]);
+            points[hour] = new HourlyPoint(hour, keys[hour], clicks[hour], wheels[hour]);
         }
 
         return points;
