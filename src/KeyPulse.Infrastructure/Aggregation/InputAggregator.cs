@@ -102,16 +102,17 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             {
                 var shortcut = _shortcuts.Process(key);
                 _inputDiagnostics?.RecordShortcutDecision(key, shortcut);
+                if (shortcut is not null && (_settings?.ShortcutStatsEnabled ?? true))
+                {
+                    _active.AddShortcut(key.Timestamp, shortcut);
+                }
+
                 if (!key.IsKeyDown)
                 {
                     return;
                 }
 
                 _active.Add(key, CurrentAppOrNull());
-                if (shortcut is not null && (_settings?.ShortcutStatsEnabled ?? true))
-                {
-                    _active.AddShortcut(key.Timestamp, shortcut);
-                }
             }
             else if (inputEvent is MouseMoveEvent move)
             {

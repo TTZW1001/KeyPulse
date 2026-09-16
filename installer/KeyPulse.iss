@@ -1,5 +1,5 @@
 #define MyAppName "KeyPulse"
-#define MyAppVersion "1.1.4"
+#define MyAppVersion "1.1.5"
 #define MyAppPublisher "TTZW1001"
 #define MyAppExeName "KeyPulse.exe"
 

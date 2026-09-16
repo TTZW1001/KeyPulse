@@ -87,7 +87,7 @@ public sealed class InputDiagnostics
 
     public void RecordShortcutDecision(KeyPressedEvent input, string? shortcut)
     {
-        if (!input.IsKeyDown || IsModifier(input.Key.Name))
+        if (IsModifier(input.Key.Name) || (!input.IsKeyDown && shortcut is null))
         {
             return;
         }

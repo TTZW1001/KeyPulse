@@ -11,6 +11,7 @@ public sealed class ShortcutTracker
 {
     private static readonly TimeSpan RecoveredModifierGrace = TimeSpan.FromMilliseconds(250);
     private readonly HashSet<string> _heldModifiers = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _pressedKeys = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DateTimeOffset> _lastModifierActivity = new(StringComparer.Ordinal);
 
     public string? Process(KeyPressedEvent input)
@@ -21,6 +22,14 @@ public sealed class ShortcutTracker
             _lastModifierActivity[modifier] = input.Timestamp;
             if (input.IsKeyDown)
             {
+                if (_heldModifiers.Count == 0)
+                {
+                    // A new modifier chord invalidates unmatched ordinary key-down state.
+                    // This lets a later key-up recover a hotkey packet whose key-down was
+                    // consumed by another global-hook application.
+                    _pressedKeys.Clear();
+                }
+
                 _heldModifiers.Add(modifier);
             }
             else
@@ -31,8 +40,18 @@ public sealed class ShortcutTracker
             return null;
         }
 
-        if (!input.IsKeyDown || input.Key.Name is "Unknown" or "")
+        if (input.Key.Name is "Unknown" or "")
         {
+            return null;
+        }
+
+        if (input.IsKeyDown)
+        {
+            _pressedKeys.Add(input.Key.Name);
+        }
+        else if (_pressedKeys.Remove(input.Key.Name))
+        {
+            // The normal key-down already produced the shortcut decision.
             return null;
         }
 
@@ -56,6 +75,7 @@ public sealed class ShortcutTracker
     public void Reset()
     {
         _heldModifiers.Clear();
+        _pressedKeys.Clear();
         _lastModifierActivity.Clear();
     }
 

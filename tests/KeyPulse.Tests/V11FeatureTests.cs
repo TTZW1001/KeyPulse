@@ -80,6 +80,57 @@ public sealed class V11FeatureTests
     }
 
     [Fact]
+    public void ShortcutTracker_RecoversHookSuppressedKeyDown_FromKeyUp()
+    {
+        var tracker = new ShortcutTracker();
+        var start = DateTimeOffset.UnixEpoch;
+        tracker.Process(Key("LeftCtrl", true) with
+        {
+            Timestamp = start,
+            ObservedModifiers = KeyboardModifiers.Ctrl
+        });
+
+        var qUp = Key("Q", false) with
+        {
+            Timestamp = start.AddMilliseconds(800),
+            ObservedModifiers = KeyboardModifiers.Ctrl
+        };
+
+        Assert.Equal("Ctrl+Q", tracker.Process(qUp));
+    }
+
+    [Fact]
+    public void ShortcutTracker_DoesNotDoubleCountNormalKeyUp()
+    {
+        var tracker = new ShortcutTracker();
+        tracker.Process(Key("LeftCtrl", true));
+
+        Assert.Equal("Ctrl+Q", tracker.Process(Key("Q", true)));
+        Assert.Null(tracker.Process(Key("Q", false)));
+    }
+
+    [Fact]
+    public void SuppressedKeyDown_IsAggregatedAsShortcutWithoutInventingKeyPress()
+    {
+        using var aggregator = Create(new FakeSettings());
+        var start = DateTimeOffset.UnixEpoch;
+        aggregator.Record(Key("LeftCtrl", true) with
+        {
+            Timestamp = start,
+            ObservedModifiers = KeyboardModifiers.Ctrl
+        });
+        aggregator.Record(Key("Q", false) with
+        {
+            Timestamp = start.AddMilliseconds(800),
+            ObservedModifiers = KeyboardModifiers.Ctrl
+        });
+
+        var snapshot = aggregator.CaptureSnapshot();
+        Assert.Equal(1, snapshot.ShortcutCounts["Ctrl+Q"]);
+        Assert.DoesNotContain("Q", snapshot.KeyCounts.Keys);
+    }
+
+    [Fact]
     public void InputDiagnostics_IsOptInMemoryOnlyAndClearsOnDisable()
     {
         var diagnostics = new InputDiagnostics();
@@ -100,6 +151,20 @@ public sealed class V11FeatureTests
 
         diagnostics.SetEnabled(false);
         Assert.Empty(diagnostics.Snapshot());
+    }
+
+    [Fact]
+    public void InputDiagnostics_ShowsRecoveredShortcutDecisionOnKeyUp()
+    {
+        var diagnostics = new InputDiagnostics();
+        diagnostics.SetEnabled(true);
+        var qUp = Key("Q", false) with { ObservedModifiers = KeyboardModifiers.Ctrl };
+
+        diagnostics.RecordShortcutDecision(qUp, "Ctrl+Q");
+
+        var entry = Assert.Single(diagnostics.Snapshot());
+        Assert.Contains("组合判定：Ctrl+Q", entry, StringComparison.Ordinal);
+        Assert.Contains("末键：Q", entry, StringComparison.Ordinal);
     }
 
     [Fact]
