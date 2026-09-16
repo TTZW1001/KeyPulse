@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P20 — V1.1.3 dashboard detail and global-hotkey compatibility
+Current Phase: P21 — V1.1.4 global-hotkey diagnostics and modifier recovery
 
 ## Completed
 
@@ -25,10 +25,11 @@ Current Phase: P20 — V1.1.3 dashboard detail and global-hotkey compatibility
 - P18 V1.1.1 interaction polish
 - P19 V1.1.2 visual fixes
 - P20 V1.1.3 dashboard detail and global-hotkey compatibility
+- P21 V1.1.4 global-hotkey diagnostics and modifier recovery
 
 ## Last Verified Commit
 
-`95074fa` — V1.1.3 dashboard detail and masked global-hotkey recovery
+`db830a2` — V1.1.4 global-hotkey modifier recovery and opt-in diagnostics
 
 ## Known Issues
 
