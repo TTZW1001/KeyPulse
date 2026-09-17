@@ -20,7 +20,7 @@ public sealed class JsonUserSettings : IUserSettings
     public JsonUserSettings(IAppPaths paths)
     {
         _path = paths.SettingsPath;
-        _file = Load(_path);
+        _file = Load(_path, File.Exists(_path));
     }
 
     public bool HideToTrayHintDismissed
@@ -59,6 +59,18 @@ public sealed class JsonUserSettings : IUserSettings
         set => _file.ScreenPositionStatsEnabled = value;
     }
 
+    public int PositionRetentionDays
+    {
+        get => _file.PositionRetentionDays ?? 0;
+        set => _file.PositionRetentionDays = value;
+    }
+
+    public bool ShowInsights
+    {
+        get => _file.ShowInsights;
+        set => _file.ShowInsights = value;
+    }
+
     public void Save()
     {
         var directory = Path.GetDirectoryName(_path);
@@ -70,7 +82,7 @@ public sealed class JsonUserSettings : IUserSettings
         File.WriteAllText(_path, JsonSerializer.Serialize(_file, JsonOptions));
     }
 
-    private static SettingsFile Load(string path)
+    private static SettingsFile Load(string path, bool existingInstallation)
     {
         try
         {
@@ -85,7 +97,7 @@ public sealed class JsonUserSettings : IUserSettings
             // fall back to defaults
         }
 
-        return new SettingsFile();
+        return new SettingsFile { PositionRetentionDays = existingInstallation ? 0 : 90 };
     }
 
     private sealed class SettingsFile
@@ -101,5 +113,9 @@ public sealed class JsonUserSettings : IUserSettings
         public bool ShortcutStatsEnabled { get; set; } = true;
 
         public bool ScreenPositionStatsEnabled { get; set; }
+
+        public int? PositionRetentionDays { get; set; }
+
+        public bool ShowInsights { get; set; } = true;
     }
 }

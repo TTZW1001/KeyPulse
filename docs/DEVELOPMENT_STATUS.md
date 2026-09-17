@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P22 — V1.1.5 suppressed key-down hotkey recovery
+Current Phase: P23 — V1.2 local insights, data governance, and input accuracy
 
 ## Completed
 
@@ -27,10 +27,11 @@ Current Phase: P22 — V1.1.5 suppressed key-down hotkey recovery
 - P20 V1.1.3 dashboard detail and global-hotkey compatibility
 - P21 V1.1.4 global-hotkey diagnostics and modifier recovery
 - P22 V1.1.5 suppressed key-down hotkey recovery
+- P23 V1.2.0 local insights, data governance, and input accuracy
 
 ## Last Verified Commit
 
-`4958999` — V1.1.5 suppressed key-down hotkey recovery
+V1.2.0 release candidate — verified with 151 Release tests
 
 ## Known Issues
 
@@ -40,11 +41,11 @@ Current Phase: P22 — V1.1.5 suppressed key-down hotkey recovery
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
 - Hourly `active_seconds` still 0; app-level `active_seconds` is a 1 s foreground sample estimate
-- AFK pause is not implemented; Flush stays 60 s
+- AFK pause is not implemented; foreground duration remains a 1 s sample
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Fn itself may not be reported by Windows; recognizable media/function results are still counted as keys
 - Historical `VK_FF` rows are hidden rather than rewritten because their original keys cannot be recovered
 - A third-party global hook that suppresses both key-down and key-up remains impossible to observe
-- Keyboard page still refreshes from the 1s shell timer when not visible
-- No DB backup / JSON export / clear-today (P13 shipped CSV export + clear-all only)
+- JSON export is not implemented; CSV export and consistent ZIP backup/restore are available
+- Physical cursor distance remains a DPI-based estimate; exact screen-coordinate distance is shown in pixels

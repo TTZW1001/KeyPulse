@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
@@ -22,6 +23,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IStatisticsExport _export;
     private readonly IUserSettings _settings;
     private readonly InputDiagnostics _inputDiagnostics;
+    private readonly IDataMaintenanceService _maintenance;
     private readonly Dispatcher _dispatcher;
     private readonly object _gate = new();
     private bool _busy;
@@ -34,7 +36,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         IFlushService flush,
         IStatisticsExport export,
         IUserSettings settings,
-        InputDiagnostics inputDiagnostics)
+        InputDiagnostics inputDiagnostics,
+        IDataMaintenanceService maintenance)
     {
         _theme = theme;
         _startup = startup;
@@ -43,8 +46,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         _export = export;
         _settings = settings;
         _inputDiagnostics = inputDiagnostics;
+        _maintenance = maintenance;
         _dispatcher = Dispatcher.CurrentDispatcher;
         DataPath = paths.DataDirectory;
+        DatabasePath = paths.DatabasePath;
         DataRoot = paths.RootDirectory;
         ProductName = ProductInfo.Name;
         VersionText = ProductInfo.Version;
@@ -57,6 +62,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     public string DataPath { get; }
+
+    public string DatabasePath { get; }
 
     public string DataRoot { get; }
 
@@ -75,6 +82,18 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _dataStatus = string.Empty;
+
+    [ObservableProperty]
+    private string _databaseSizeText = "正在读取…";
+
+    [ObservableProperty]
+    private string _dateRangeText = "—";
+
+    [ObservableProperty]
+    private string _lastFlushText = "—";
+
+    [ObservableProperty]
+    private string _writeHealthText = "正常";
 
     public bool StartupEnabled
     {
@@ -132,6 +151,42 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool ShowInsights
+    {
+        get => _settings.ShowInsights;
+        set
+        {
+            if (_settings.ShowInsights == value) return;
+            _settings.ShowInsights = value;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsRetention30Days
+    {
+        get => _settings.PositionRetentionDays == 30;
+        set { if (value) SetRetention(30); }
+    }
+
+    public bool IsRetention90Days
+    {
+        get => _settings.PositionRetentionDays == 90;
+        set { if (value) SetRetention(90); }
+    }
+
+    public bool IsRetention365Days
+    {
+        get => _settings.PositionRetentionDays == 365;
+        set { if (value) SetRetention(365); }
+    }
+
+    public bool IsRetentionForever
+    {
+        get => _settings.PositionRetentionDays <= 0;
+        set { if (value) SetRetention(0); }
+    }
+
     public bool IsLightTheme
     {
         get => _theme.Mode == ThemeMode.Light;
@@ -175,8 +230,10 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(ShortcutStatsEnabled));
         OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
         OnPropertyChanged(nameof(InputDiagnosticsEnabled));
+        OnPropertyChanged(nameof(ShowInsights));
         ReloadExcluded();
         ReloadInputDiagnostics();
+        _ = RefreshDataStatusAsync();
     }
 
     [RelayCommand]
@@ -291,6 +348,27 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ClearRangeAsync(string? range)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var from = string.Equals(range, "today", StringComparison.Ordinal) ? today : today.AddDays(-29);
+        var label = from == today ? "今天" : "最近 30 天";
+        var confirm = WpfMessageBox.Show(
+            $"将删除{label}的键鼠、快捷键、应用及有日期的位置明细；累计像素覆盖不受影响。此操作不能撤销。",
+            "按范围清除", System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning, System.Windows.MessageBoxResult.No);
+        if (confirm != System.Windows.MessageBoxResult.Yes || !TryBegin()) return;
+        try
+        {
+            await _flush.ClearStatisticsRangeAsync(from, today).ConfigureAwait(true);
+            DataStatus = $"{label}的统计数据已清除。";
+            await RefreshDataStatusAsync();
+        }
+        catch (Exception ex) { DataStatus = "清除失败：" + ex.Message; }
+        finally { End(); }
+    }
+
+    [RelayCommand]
     private async Task ClearPositionDataAsync()
     {
         var confirm = WpfMessageBox.Show(
@@ -316,6 +394,76 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             End();
         }
+    }
+
+    [RelayCommand]
+    private async Task BackupAsync()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = "选择备份保存目录" };
+        if (dialog.ShowDialog() != true || !TryBegin()) return;
+        try
+        {
+            DataStatus = "正在创建一致性备份…";
+            await _flush.FlushNowAsync().ConfigureAwait(true);
+            string? archive = null;
+            await _flush.RunExclusiveAsync(async ct =>
+                archive = await _maintenance.CreateBackupAsync(dialog.FolderName, ct)).ConfigureAwait(true);
+            DataStatus = "备份已保存：" + archive;
+        }
+        catch (Exception ex)
+        {
+            DataStatus = "备份失败：" + ex.Message;
+        }
+        finally { End(); }
+    }
+
+    [RelayCommand]
+    private async Task RestoreAsync()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选择 KeyPulse 备份",
+            Filter = "KeyPulse 备份|*.zip"
+        };
+        if (dialog.ShowDialog() != true) return;
+        var confirm = WpfMessageBox.Show(
+            "恢复前会自动备份当前数据。恢复成功后需要重启 KeyPulse 才能重新载入全部设置，是否继续？",
+            "恢复备份", System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning, System.Windows.MessageBoxResult.No);
+        if (confirm != System.Windows.MessageBoxResult.Yes || !TryBegin()) return;
+        try
+        {
+            DataStatus = "正在校验并恢复备份…";
+            await _flush.FlushNowAsync().ConfigureAwait(true);
+            await _flush.RunExclusiveAsync(async ct =>
+            {
+                var safetyDirectory = Path.Combine(DataRoot, "backups-before-restore");
+                await _maintenance.CreateBackupAsync(safetyDirectory, ct);
+                await _maintenance.RestoreBackupAsync(dialog.FileName, ct);
+            }).ConfigureAwait(true);
+            DataStatus = "恢复完成。请重启 KeyPulse 以重新载入设置。";
+        }
+        catch (Exception ex)
+        {
+            DataStatus = "恢复失败，当前数据未主动清除：" + ex.Message;
+        }
+        finally { End(); }
+    }
+
+    [RelayCommand]
+    private async Task VacuumAsync()
+    {
+        if (!TryBegin()) return;
+        try
+        {
+            DataStatus = "正在整理数据库空闲空间…";
+            await _flush.FlushNowAsync().ConfigureAwait(true);
+            await _flush.RunExclusiveAsync(_maintenance.VacuumAsync).ConfigureAwait(true);
+            DataStatus = "数据库整理完成。";
+            await RefreshDataStatusAsync();
+        }
+        catch (Exception ex) { DataStatus = "整理失败：" + ex.Message; }
+        finally { End(); }
     }
 
     [RelayCommand]
@@ -353,6 +501,46 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             InputDiagnosticRows.Add(entry);
         }
+    }
+
+    private void SetRetention(int days)
+    {
+        if (_settings.PositionRetentionDays == days) return;
+        _settings.PositionRetentionDays = days;
+        _settings.Save();
+        OnPropertyChanged(nameof(IsRetention30Days));
+        OnPropertyChanged(nameof(IsRetention90Days));
+        OnPropertyChanged(nameof(IsRetention365Days));
+        OnPropertyChanged(nameof(IsRetentionForever));
+        _ = RefreshDataStatusAsync();
+    }
+
+    private async Task RefreshDataStatusAsync()
+    {
+        try
+        {
+            var status = await _maintenance.GetStatusAsync(
+                _flush.LastSuccessfulFlush, _flush.HasWriteError).ConfigureAwait(false);
+            await _dispatcher.InvokeAsync(() =>
+            {
+                DatabaseSizeText = FormatBytes(status.DatabaseBytes);
+                DateRangeText = status.EarliestDate is null ? "暂无统计数据" :
+                    $"{status.EarliestDate:yyyy-MM-dd} ～ {status.LatestDate:yyyy-MM-dd}";
+                LastFlushText = status.LastSuccessfulFlush?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "本次启动尚未写入";
+                WriteHealthText = status.HasWriteError ? "写入异常，正在重试" : "正常";
+            });
+        }
+        catch (Exception ex)
+        {
+            await _dispatcher.InvokeAsync(() => WriteHealthText = "读取失败：" + ex.Message);
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024L) return (bytes / 1024D / 1024D).ToString("0.0") + " MB";
+        if (bytes >= 1024L) return (bytes / 1024D).ToString("0.0") + " KB";
+        return bytes + " B";
     }
 
     private bool TryBegin()

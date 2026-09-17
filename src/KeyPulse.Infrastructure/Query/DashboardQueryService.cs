@@ -87,7 +87,8 @@ public sealed class DashboardQueryService : IDashboardQuery
             mouse.CursorDistancePixels,
             topKey,
             topCount,
-            _reader.State);
+            _reader.State,
+            mouse.EstimatedDistanceMeters);
     }
 
     public Task<IReadOnlyList<DailyTrendPoint>> GetLast7DaysAsync(CancellationToken cancellationToken = default) =>
@@ -179,6 +180,58 @@ public sealed class DashboardQueryService : IDashboardQuery
         }
 
         return points;
+    }
+
+    public async Task<DashboardInsights> GetInsightsAsync(
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        var hours = await GetTodayHourlyAsync(date, cancellationToken).ConfigureAwait(false);
+        var peak = hours.OrderByDescending(point => point.ActivityCount).ThenBy(point => point.Hour).FirstOrDefault();
+        var unflushed = _reader.CaptureUnflushed();
+
+        var shortcuts = (await ReadAsync(
+            () => _repository.GetShortcutStatsAsync(date, date, cancellationToken).GetAwaiter().GetResult(),
+            cancellationToken).ConfigureAwait(false))
+            .ToDictionary(row => row.ShortcutCode, row => row.PressCount, StringComparer.Ordinal);
+        if (unflushed.ShortcutCountsByDate.TryGetValue(date, out var liveShortcuts))
+            foreach (var pair in liveShortcuts) shortcuts[pair.Key] = shortcuts.GetValueOrDefault(pair.Key) + pair.Value;
+        var topShortcut = shortcuts.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal).FirstOrDefault();
+
+        var apps = (await ReadAsync(
+            () => _repository.GetAppStatsAsync(date, date, cancellationToken).GetAwaiter().GetResult(),
+            cancellationToken).ConfigureAwait(false))
+            .GroupBy(row => row.ProcessName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Sum(row => row.ActiveSeconds), StringComparer.OrdinalIgnoreCase);
+        if (unflushed.AppStatsByDate.TryGetValue(date, out var liveApps))
+            foreach (var pair in liveApps) apps[pair.Key] = apps.GetValueOrDefault(pair.Key) + pair.Value.ActiveSeconds;
+        var topApp = apps.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+
+        var earliest = await _repository.GetEarliestStatDateAsync(cancellationToken).ConfigureAwait(false);
+        var start = earliest is null || earliest > date ? date : earliest.Value;
+        var dailyKeys = await ReadAsync(
+            () => _repository.GetKeyStatsAsync(start, date, cancellationToken).GetAwaiter().GetResult(), cancellationToken).ConfigureAwait(false);
+        var dailyMouse = await ReadAsync(
+            () => _repository.GetMouseStatsAsync(start, date, cancellationToken).GetAwaiter().GetResult(), cancellationToken).ConfigureAwait(false);
+        var totals = new Dictionary<DateOnly, long>();
+        foreach (var row in dailyKeys) totals[row.Date] = totals.GetValueOrDefault(row.Date) + row.PressCount;
+        foreach (var row in dailyMouse) totals[row.Date] = totals.GetValueOrDefault(row.Date) + Clicks(row.Mouse) + Wheel(row.Mouse);
+        foreach (var pair in unflushed.KeyCountsByDate) totals[pair.Key] = totals.GetValueOrDefault(pair.Key) + pair.Value.Values.Sum();
+        foreach (var pair in unflushed.MouseByDate) totals[pair.Key] = totals.GetValueOrDefault(pair.Key) + Clicks(pair.Value) + Wheel(pair.Value);
+        var todayActivity = totals.GetValueOrDefault(date);
+        var previous = totals.Where(pair => pair.Key < date).Select(pair => pair.Value).ToArray();
+        var record = totals.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key).FirstOrDefault();
+
+        return new DashboardInsights(
+            peak is { ActivityCount: > 0 } ? peak.Hour : null,
+            peak?.ActivityCount ?? 0,
+            string.IsNullOrEmpty(topShortcut.Key) ? null : topShortcut.Key,
+            topShortcut.Value,
+            string.IsNullOrEmpty(topApp.Key) ? null : topApp.Key,
+            todayActivity,
+            previous.Length == 0 ? 0 : previous.Average(),
+            record.Value > 0 ? record.Key : null,
+            record.Value);
     }
 
     private static DateOnly Today() => DateOnly.FromDateTime(DateTime.Now);

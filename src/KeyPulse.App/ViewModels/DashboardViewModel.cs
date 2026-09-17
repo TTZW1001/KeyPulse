@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
@@ -15,6 +16,7 @@ namespace KeyPulse.App.ViewModels;
 
 public sealed partial class DashboardViewModel : ObservableObject
 {
+    public event Action<DateOnly>? TrendDetailRequested;
     private static readonly SKColor Accent = new(0x4E, 0x6E, 0x9E);
     private static readonly SKColor AccentFill = new(0x4E, 0x6E, 0x9E, 0xC8);
     private static readonly SKColor ClickFill = new(0x5F, 0x99, 0x98, 0xD8);
@@ -24,16 +26,22 @@ public sealed partial class DashboardViewModel : ObservableObject
     private readonly IFlushService _flush;
     private readonly ThemeService _theme;
     private readonly Dispatcher _dispatcher;
+    private readonly IUserSettings _settings;
     private readonly object _gate = new();
     private bool _busy;
     private bool _chartsStale = true;
     private DateOnly _chartsDate;
+    private IReadOnlyList<DailyTrendPoint> _trendPoints = [];
+    private IReadOnlyList<HourlyPoint> _hourlyPoints = [];
+    private DateTime? _lastSuccessfulUpdate;
+    private bool _isActive;
 
-    public DashboardViewModel(IDashboardQuery query, IFlushService flush, ThemeService theme)
+    public DashboardViewModel(IDashboardQuery query, IFlushService flush, ThemeService theme, IUserSettings settings)
     {
         _query = query;
         _flush = flush;
         _theme = theme;
+        _settings = settings;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _flush.Flushed += OnFlushed;
         _theme.Changed += OnThemeChanged;
@@ -53,10 +61,57 @@ public sealed partial class DashboardViewModel : ObservableObject
     private string _distanceText = "0 px";
 
     [ObservableProperty]
+    private string _distanceEstimateText = "约 0 m（估算）";
+
+    [ObservableProperty]
     private string _mostUsedText = "暂无";
 
     [ObservableProperty]
     private string _statusText = "正在统计";
+
+    [ObservableProperty]
+    private string _dataStateText = "正在加载…";
+
+    [ObservableProperty]
+    private string _peakHourText = "暂无足够数据";
+
+    [ObservableProperty]
+    private string _topShortcutText = "暂无足够数据";
+
+    [ObservableProperty]
+    private string _topAppText = "暂无足够数据";
+
+    [ObservableProperty]
+    private string _comparisonText = "暂无历史基线";
+
+    [ObservableProperty]
+    private string _recordText = "暂无纪录";
+
+    public bool ShowInsights => _settings.ShowInsights;
+
+    [ObservableProperty]
+    private bool _hasDataWarning;
+
+    [ObservableProperty]
+    private DashboardTrendMetric _trendMetric = DashboardTrendMetric.Keys;
+
+    public bool IsKeysTrend
+    {
+        get => TrendMetric == DashboardTrendMetric.Keys;
+        set { if (value) TrendMetric = DashboardTrendMetric.Keys; }
+    }
+
+    public bool IsClicksTrend
+    {
+        get => TrendMetric == DashboardTrendMetric.Clicks;
+        set { if (value) TrendMetric = DashboardTrendMetric.Clicks; }
+    }
+
+    public bool IsWheelTrend
+    {
+        get => TrendMetric == DashboardTrendMetric.Wheel;
+        set { if (value) TrendMetric = DashboardTrendMetric.Wheel; }
+    }
 
     [ObservableProperty]
     private ISeries[] _trendSeries = [];
@@ -78,6 +133,7 @@ public sealed partial class DashboardViewModel : ObservableObject
 
     public async Task RefreshAsync()
     {
+        if (_dispatcher.CheckAccess()) OnPropertyChanged(nameof(ShowInsights));
         lock (_gate)
         {
             if (_busy)
@@ -94,10 +150,12 @@ public sealed partial class DashboardViewModel : ObservableObject
             var needCharts = _chartsStale || _chartsDate != today.Date;
             IReadOnlyList<DailyTrendPoint>? days = null;
             IReadOnlyList<HourlyPoint>? hours = null;
+            DashboardInsights? insights = null;
             if (needCharts)
             {
                 days = await _query.GetLast7DaysAsync(today.Date).ConfigureAwait(false);
                 hours = await _query.GetTodayHourlyAsync(today.Date).ConfigureAwait(false);
+                insights = await _query.GetInsightsAsync(today.Date).ConfigureAwait(false);
             }
 
             await _dispatcher.InvokeAsync(() =>
@@ -105,15 +163,28 @@ public sealed partial class DashboardViewModel : ObservableObject
                 ApplyToday(today);
                 if (days is not null && hours is not null)
                 {
+                    _trendPoints = days;
+                    _hourlyPoints = hours;
                     BuildCharts(days, hours);
                     _chartsDate = today.Date;
                     _chartsStale = false;
                 }
+                if (insights is not null) ApplyInsights(insights);
+
+                _lastSuccessfulUpdate = DateTime.Now;
+                DataStateText = "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+                HasDataWarning = false;
             });
         }
         catch
         {
-            // keep last painted values; next tick retries
+            await _dispatcher.InvokeAsync(() =>
+            {
+                DataStateText = _lastSuccessfulUpdate is { } updated
+                    ? "刷新失败，当前为 " + updated.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + " 的数据"
+                    : "首次加载失败，请重试";
+                HasDataWarning = true;
+            });
         }
         finally
         {
@@ -124,7 +195,16 @@ public sealed partial class DashboardViewModel : ObservableObject
         }
     }
 
-    public void Refresh() => _ = RefreshAsync();
+    public void SetActive(bool active)
+    {
+        _isActive = active;
+        if (active) Refresh();
+    }
+
+    public void Refresh()
+    {
+        if (_isActive) _ = RefreshAsync();
+    }
 
     private void ApplyToday(DashboardToday today)
     {
@@ -133,6 +213,7 @@ public sealed partial class DashboardViewModel : ObservableObject
         ClickCountText = today.MouseClickCount.ToString("N0", culture);
         WheelCountText = today.WheelEventCount.ToString("N0", culture);
         DistanceText = FormatDistance(today.DistancePixels);
+        DistanceEstimateText = FormatEstimatedDistance(today.EstimatedDistanceMeters);
         MostUsedText = today.TopKey is null || today.TopKeyCount <= 0
             ? "暂无"
             : today.TopKey + " · " + today.TopKeyCount.ToString("N0", culture);
@@ -152,7 +233,7 @@ public sealed partial class DashboardViewModel : ObservableObject
         {
             if (i < days.Count)
             {
-                trendValues[i] = days[i].KeyPressCount;
+                trendValues[i] = TrendValue(days[i]);
                 trendLabels[i] = days[i].Date.ToString("M/d", CultureInfo.CurrentCulture);
             }
             else
@@ -182,7 +263,12 @@ public sealed partial class DashboardViewModel : ObservableObject
         [
             new LineSeries<long>
             {
-                Name = "按键",
+                Name = TrendMetric switch
+                {
+                    DashboardTrendMetric.Clicks => "点击",
+                    DashboardTrendMetric.Wheel => "滚轮",
+                    _ => "按键"
+                },
                 Values = trendValues,
                 Fill = null,
                 Stroke = new SolidColorPaint(Accent) { StrokeThickness = 2 },
@@ -299,29 +385,87 @@ public sealed partial class DashboardViewModel : ObservableObject
     private static string FormatDistance(double pixels)
     {
         var culture = CultureInfo.CurrentCulture;
-        var meters = pixels / 96.0 * 0.0254;
-        if (meters >= 10)
-        {
-            return (meters / 1000.0).ToString("0.00", culture) + " km";
-        }
-
-        if (meters >= 1)
-        {
-            return meters.ToString("0.0", culture) + " m";
-        }
-
         return pixels.ToString("N0", culture) + " px";
     }
+
+    private static string FormatEstimatedDistance(double meters)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        return meters >= 1000
+            ? "约 " + (meters / 1000).ToString("0.00", culture) + " km（估算）"
+            : "约 " + meters.ToString(meters >= 10 ? "0" : "0.0", culture) + " m（估算）";
+    }
+
+    private long TrendValue(DailyTrendPoint point) => TrendMetric switch
+    {
+        DashboardTrendMetric.Clicks => point.MouseClickCount,
+        DashboardTrendMetric.Wheel => point.WheelEventCount,
+        _ => point.KeyPressCount
+    };
+
+    private void ApplyInsights(DashboardInsights insights)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        PeakHourText = insights.PeakHour is { } hour
+            ? $"{hour:00}:00–{hour:00}:59 · {insights.PeakActivity.ToString("N0", culture)} 次活动"
+            : "暂无足够数据";
+        TopShortcutText = insights.TopShortcut is null
+            ? "暂无足够数据"
+            : insights.TopShortcut + " · " + insights.TopShortcutCount.ToString("N0", culture) + " 次";
+        TopAppText = insights.TopApp ?? "暂无足够数据";
+        ComparisonText = insights.PreviousDailyAverage <= 0
+            ? "暂无历史基线"
+            : "较历史日均 " + ((insights.TodayActivity / insights.PreviousDailyAverage - 1) * 100)
+                .ToString("+0;-0;0", culture) + "%";
+        RecordText = insights.RecordDate is null
+            ? "暂无纪录"
+            : $"{insights.RecordDate:yyyy-MM-dd} · {insights.RecordActivity.ToString("N0", culture)} 次活动";
+    }
+
+    partial void OnTrendMetricChanged(DashboardTrendMetric value)
+    {
+        OnPropertyChanged(nameof(IsKeysTrend));
+        OnPropertyChanged(nameof(IsClicksTrend));
+        OnPropertyChanged(nameof(IsWheelTrend));
+        if (_trendPoints.Count > 0)
+        {
+            BuildCharts(_trendPoints, _hourlyPoints);
+        }
+    }
+
+    [RelayCommand]
+    private Task Retry() => RefreshAsync();
+
+    [RelayCommand]
+    private void OpenTrendDetail(ChartPoint? point)
+    {
+        var index = point is null ? -1 : (int)Math.Round(point.Coordinate.SecondaryValue);
+        var date = index >= 0 && index < _trendPoints.Count
+            ? _trendPoints[index].Date
+            : DateOnly.FromDateTime(DateTime.Now);
+        TrendDetailRequested?.Invoke(date);
+    }
+
+    [RelayCommand]
+    private void OpenHourlyDetail(ChartPoint? point) =>
+        TrendDetailRequested?.Invoke(DateOnly.FromDateTime(DateTime.Now));
 
     private void OnFlushed()
     {
         _chartsStale = true;
-        _ = RefreshAsync();
+        Refresh();
     }
 
     private void OnThemeChanged()
     {
         _chartsStale = true;
-        _ = RefreshAsync();
+        Refresh();
     }
+}
+
+public enum DashboardTrendMetric
+{
+    Keys,
+    Clicks,
+    Wheel
 }

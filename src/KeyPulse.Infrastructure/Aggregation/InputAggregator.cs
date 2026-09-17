@@ -15,6 +15,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
     private readonly IUserSettings? _settings;
     private readonly InputDiagnostics? _inputDiagnostics;
     private readonly ShortcutTracker _shortcuts = new();
+    private readonly MouseGestureTracker _mouseGestures = new();
     private readonly object _gate = new();
     private StatisticsBuffer _active = new();
     private StatisticsBuffer _flush = new();
@@ -70,6 +71,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             if (state != TrackingState.Running)
             {
                 _shortcuts.Reset();
+                _mouseGestures.Reset();
                 _lastPointerPosition = null;
                 _lastTrajectoryPosition = null;
             }
@@ -117,13 +119,18 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             else if (inputEvent is MouseMoveEvent move)
             {
                 var enriched = EnrichDistance(move);
+                _mouseGestures.Observe(enriched.Position);
                 _active.Add(enriched, CurrentAppOrNull());
             }
             else if (inputEvent is MouseButtonEvent button)
             {
-                _active.Add((_settings?.ScreenPositionStatsEnabled ?? false)
-                    ? button
-                    : button with { Position = null }, CurrentAppOrNull());
+                var click = _mouseGestures.Process(button);
+                if (click is not null)
+                {
+                    _active.Add((_settings?.ScreenPositionStatsEnabled ?? false)
+                        ? click
+                        : click with { Position = null }, CurrentAppOrNull());
+                }
             }
             else
             {
@@ -170,6 +177,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             _flush.Clear();
             _lastInputTime = null;
             _shortcuts.Reset();
+            _mouseGestures.Reset();
             _lastPointerPosition = null;
             _lastTrajectoryPosition = null;
         }
@@ -182,6 +190,15 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             _active.ClearPositionData();
             _flush.ClearPositionData();
             _lastTrajectoryPosition = null;
+        }
+    }
+
+    public void ClearOccupancyData()
+    {
+        lock (_gate)
+        {
+            _active.ClearOccupancyData();
+            _flush.ClearOccupancyData();
         }
     }
 

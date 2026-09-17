@@ -52,16 +52,20 @@ public class RawMouseParserTests
     private readonly RawMouseParser _parser = new();
 
     [Fact]
-    public void CountsButtonDown_IgnoresUp()
+    public void EmitsButtonDownAndUp_ForGestureClassification()
     {
         var down = new List<InputEvent>();
         _parser.Parse(0, RawMouseParser.LeftDown, 0, 0, 0, DateTimeOffset.UnixEpoch, down);
         Assert.Single(down);
-        Assert.Equal(MouseButton.Left, Assert.IsType<MouseButtonEvent>(down[0]).Button);
+        var downEvent = Assert.IsType<MouseButtonEvent>(down[0]);
+        Assert.Equal(MouseButton.Left, downEvent.Button);
+        Assert.Equal(MouseButtonAction.Down, downEvent.Action);
 
         var up = new List<InputEvent>();
-        _parser.Parse(0, 0x0002, 0, 0, 0, DateTimeOffset.UnixEpoch, up);
-        Assert.Empty(up);
+        _parser.Parse(0, RawMouseParser.LeftUp, 0, 0, 0, DateTimeOffset.UnixEpoch, up);
+        var upEvent = Assert.IsType<MouseButtonEvent>(Assert.Single(up));
+        Assert.Equal(MouseButton.Left, upEvent.Button);
+        Assert.Equal(MouseButtonAction.Up, upEvent.Action);
     }
 
     [Fact]

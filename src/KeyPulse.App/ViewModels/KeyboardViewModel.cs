@@ -29,6 +29,8 @@ public sealed partial class KeyboardViewModel : ObservableObject
     private readonly object _gate = new();
     private bool _busy;
     private KeyboardRange _range = KeyboardRange.Last7Days;
+    private DateTime? _lastSuccessfulUpdate;
+    private bool _isActive;
 
     public KeyboardViewModel(
         IKeyboardQuery query,
@@ -117,6 +119,9 @@ public sealed partial class KeyboardViewModel : ObservableObject
     [ObservableProperty]
     private IReadOnlyList<Media.Brush> _legendFills = [];
 
+    [ObservableProperty]
+    private string _dataStateText = "正在加载…";
+
     public bool IsTodayRange
     {
         get => _range == KeyboardRange.Today;
@@ -153,7 +158,16 @@ public sealed partial class KeyboardViewModel : ObservableObject
         set { if (value) SetRange(KeyboardRange.All); }
     }
 
-    public void Refresh() => _ = RefreshAsync();
+    public void SetActive(bool active)
+    {
+        _isActive = active;
+        if (active) Refresh();
+    }
+
+    public void Refresh()
+    {
+        if (_isActive) _ = RefreshAsync();
+    }
 
     public async Task RefreshAsync()
     {
@@ -174,11 +188,18 @@ public sealed partial class KeyboardViewModel : ObservableObject
             var keysTask = _query.GetKeyCountsAsync(from, today);
             var shortcutsTask = _query.GetShortcutCountsAsync(from, today);
             await Task.WhenAll(keysTask, shortcutsTask).ConfigureAwait(false);
-            await _dispatcher.InvokeAsync(() => ApplyCounts(keysTask.Result, shortcutsTask.Result));
+            await _dispatcher.InvokeAsync(() =>
+            {
+                ApplyCounts(keysTask.Result, shortcutsTask.Result);
+                _lastSuccessfulUpdate = DateTime.Now;
+                DataStateText = "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+            });
         }
         catch
         {
-            // keep last painted keys
+            await _dispatcher.InvokeAsync(() => DataStateText = _lastSuccessfulUpdate is { } updated
+                ? "刷新失败，当前为 " + updated.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + " 的数据"
+                : "首次加载失败，请重试");
         }
         finally
         {
@@ -188,6 +209,9 @@ public sealed partial class KeyboardViewModel : ObservableObject
             }
         }
     }
+
+    [RelayCommand]
+    private Task Retry() => RefreshAsync();
 
     private void SetRange(KeyboardRange range)
     {

@@ -2,34 +2,36 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF">
+    <UserControl.Resources><BooleanToVisibilityConverter x:Key="BoolToVis"/></UserControl.Resources>
     <ScrollViewer Style="{StaticResource PageScrollViewer}">
         <StackPanel>
             <TextBlock Text="今日" Style="{StaticResource SecondaryText}" Margin="0,0,0,12"/>
             <Border Style="{StaticResource SectionDivider}" Padding="0,0,0,20" Margin="0,0,0,20">
                 <UniformGrid Columns="4">
-                    <StackPanel Margin="0,0,16,0">
+                    <StackPanel Margin="0,0,16,0" ToolTip="统计按键按下次数；组合键中的每个按键仍分别计数。">
                         <TextBlock Text="{Binding KeyCountText}"
                                    Style="{StaticResource MetricValue}"
                                    AutomationProperties.AutomationId="MetricKeys"/>
                         <TextBlock Text="次按键" Style="{StaticResource MetricLabel}"/>
                     </StackPanel>
-                    <StackPanel Margin="0,0,16,0">
+                    <StackPanel Margin="0,0,16,0" ToolTip="仅统计在系统拖拽阈值内完成按下与松开的点击；拖拽不计入。">
                         <TextBlock Text="{Binding ClickCountText}"
                                    Style="{StaticResource MetricValue}"
                                    AutomationProperties.AutomationId="MetricClicks"/>
                         <TextBlock Text="次点击" Style="{StaticResource MetricLabel}"/>
                     </StackPanel>
-                    <StackPanel Margin="0,0,16,0">
+                    <StackPanel Margin="0,0,16,0" ToolTip="按收到的垂直或水平滚轮事件计数，不等同于滚动像素。">
                         <TextBlock Text="{Binding WheelCountText}"
                                    Style="{StaticResource MetricValue}"
                                    AutomationProperties.AutomationId="MetricWheel"/>
                         <TextBlock Text="次滚轮" Style="{StaticResource MetricLabel}"/>
                     </StackPanel>
-                    <StackPanel>
+                    <StackPanel ToolTip="像素距离来自系统光标坐标；物理距离按显示器 DPI 估算。">
                         <TextBlock Text="{Binding DistanceText}"
                                    Style="{StaticResource MetricValue}"
                                    AutomationProperties.AutomationId="MetricDistance"/>
                         <TextBlock Text="鼠标移动" Style="{StaticResource MetricLabel}"/>
+                        <TextBlock Text="{Binding DistanceEstimateText}" Style="{StaticResource SecondaryText}" FontSize="11"/>
                     </StackPanel>
                 </UniformGrid>
             </Border>
@@ -46,7 +48,41 @@
                            AutomationProperties.AutomationId="MostUsedKey"/>
             </DockPanel>
 
-            <TextBlock Text="最近 7 天活动趋势" Style="{StaticResource SectionTitleText}"/>
+            <StackPanel Visibility="{Binding ShowInsights, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="今日小结" Style="{StaticResource SectionTitleText}"/>
+            <Border Style="{StaticResource SectionDivider}"/>
+            <UniformGrid Columns="2" Margin="0,0,0,20">
+                <StackPanel Margin="0,0,20,12">
+                    <TextBlock Text="最活跃时段" Style="{StaticResource SecondaryText}"/>
+                    <TextBlock Text="{Binding PeakHourText}" Style="{StaticResource BodyText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,12">
+                    <TextBlock Text="最常用快捷键" Style="{StaticResource SecondaryText}"/>
+                    <TextBlock Text="{Binding TopShortcutText}" Style="{StaticResource BodyText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,20,0">
+                    <TextBlock Text="前台时间最长" Style="{StaticResource SecondaryText}"/>
+                    <TextBlock Text="{Binding TopAppText}" Style="{StaticResource BodyText}" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="相对历史 / 个人纪录" Style="{StaticResource SecondaryText}"/>
+                    <TextBlock Text="{Binding ComparisonText}" Style="{StaticResource BodyText}"/>
+                    <TextBlock Text="{Binding RecordText}" Style="{StaticResource SecondaryText}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </UniformGrid>
+            </StackPanel>
+
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="最近 7 天活动趋势" Style="{StaticResource SectionTitleText}"/>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <RadioButton Content="按键" GroupName="DashboardTrend"
+                                 IsChecked="{Binding IsKeysTrend, Mode=TwoWay}"/>
+                    <RadioButton Content="点击" GroupName="DashboardTrend"
+                                 IsChecked="{Binding IsClicksTrend, Mode=TwoWay}"/>
+                    <RadioButton Content="滚轮" GroupName="DashboardTrend" Margin="0"
+                                 IsChecked="{Binding IsWheelTrend, Mode=TwoWay}"/>
+                </StackPanel>
+            </DockPanel>
             <Border Style="{StaticResource SectionDivider}"/>
             <lvc:CartesianChart Height="176"
                                 Margin="0,0,0,8"
@@ -58,7 +94,13 @@
                                 ZoomMode="None"
                                 AnimationsSpeed="0:0:0"
                                 Background="Transparent"
+                                ChartPointPointerDownCommand="{Binding OpenTrendDetailCommand}"
                                 AutomationProperties.AutomationId="TrendChart"/>
+            <Button Content="查看今天的趋势详情"
+                    Command="{Binding OpenTrendDetailCommand}"
+                    HorizontalAlignment="Left"
+                    Margin="0,2,0,8"
+                    AutomationProperties.HelpText="与点击趋势图数据点进入详情的操作相同"/>
 
             <DockPanel Margin="0,16,0,0">
                 <TextBlock DockPanel.Dock="Left" Text="今日活跃时段" Style="{StaticResource SectionTitleText}"/>
@@ -82,12 +124,17 @@
                                 ZoomMode="None"
                                 AnimationsSpeed="0:0:0"
                                 Background="Transparent"
+                                ChartPointPointerDownCommand="{Binding OpenHourlyDetailCommand}"
                                 AutomationProperties.AutomationId="HourlyChart"/>
 
             <TextBlock Text="状态" Style="{StaticResource SecondaryText}" Margin="0,16,0,6"/>
             <TextBlock Text="{Binding StatusText}"
                        Style="{StaticResource BodyText}"
                        AutomationProperties.AutomationId="DashboardStatus"/>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <TextBlock Text="{Binding DataStateText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                <Button Content="刷新" Command="{Binding RetryCommand}" Margin="12,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

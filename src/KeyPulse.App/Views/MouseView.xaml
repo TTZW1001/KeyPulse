@@ -92,16 +92,46 @@
                 </StackPanel>
             </Grid>
             <Border Style="{StaticResource SectionDivider}"/>
+            <WrapPanel Margin="0,0,0,12">
+                <ComboBox ItemsSource="{Binding MonitorOptions}"
+                          SelectedItem="{Binding SelectedMonitor}"
+                          DisplayMemberPath="Label"
+                          MinWidth="200"
+                          Margin="0,0,10,0"
+                          AutomationProperties.Name="显示器筛选"/>
+                <ComboBox ItemsSource="{Binding ButtonOptions}"
+                          SelectedItem="{Binding SelectedButton}"
+                          DisplayMemberPath="Label"
+                          MinWidth="140"
+                          Margin="0,0,10,0"
+                          AutomationProperties.Name="点击按键筛选"/>
+                <CheckBox Content="按当前视图归一化强度"
+                          IsChecked="{Binding UseRelativeIntensity, Mode=TwoWay}"
+                          ToolTip="关闭后使用全局强度尺度，便于跨显示器比较"/>
+                <CheckBox Content="对数色阶"
+                          IsChecked="{Binding UseLogScale, Mode=TwoWay}"
+                          ToolTip="数据跨度很大时可开启；默认使用线性色阶"/>
+            </WrapPanel>
+            <WrapPanel Margin="0,0,0,8">
+                <CheckBox Content="点击图层" IsChecked="{Binding ShowClickLayer, Mode=TwoWay}"/>
+                <CheckBox Content="轨迹图层" IsChecked="{Binding ShowTrajectoryLayer, Mode=TwoWay}"/>
+                <CheckBox Content="覆盖挑战" IsChecked="{Binding ShowCoverageLayer, Mode=TwoWay}"/>
+            </WrapPanel>
+            <TextBlock Text="{Binding HeatmapLegendText}" Style="{StaticResource SecondaryText}"
+                       TextWrapping="Wrap" Margin="0,0,0,10"/>
             <CheckBox Content="记录屏幕位置热力图"
                       IsChecked="{Binding ScreenPositionStatsEnabled, Mode=TwoWay}"/>
             <TextBlock Text="只保存本机坐标统计，不截屏，不记录窗口名称或输入内容。关闭后仍可查看已有数据。"
                        Style="{StaticResource SecondaryText}" Margin="22,0,0,12"/>
             <UniformGrid Columns="3" Margin="0,0,0,8">
-                <StackPanel Margin="0,0,12,0"><TextBlock Text="点击位置" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding ClickHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
-                <StackPanel Margin="0,0,12,0"><TextBlock Text="鼠标轨迹" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding TrajectoryHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
-                <StackPanel><TextBlock Text="像素覆盖" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding CoverageHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
+                <StackPanel Margin="0,0,12,0" Visibility="{Binding ShowClickLayer, Converter={StaticResource BoolToVis}}"><TextBlock Text="点击位置" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding ClickHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
+                <StackPanel Margin="0,0,12,0" Visibility="{Binding ShowTrajectoryLayer, Converter={StaticResource BoolToVis}}"><TextBlock Text="鼠标轨迹" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding TrajectoryHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
+                <StackPanel Visibility="{Binding ShowCoverageLayer, Converter={StaticResource BoolToVis}}"><TextBlock Text="覆盖挑战" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding CoverageHeatmapImage}" Height="170" Stretch="Uniform"/></Border></StackPanel>
             </UniformGrid>
             <TextBlock Text="{Binding CoverageText}" Style="{StaticResource SecondaryText}" Margin="0,2,0,20"/>
+            <TextBlock Text="覆盖率按本地采样网格估算，表示光标中心路径经过的区域，不是逐物理像素精确覆盖，也不代表指针图形覆盖面积。"
+                       Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,-14,0,8"/>
+            <Button Content="重置累计覆盖" Command="{Binding ResetCoverageCommand}" HorizontalAlignment="Left" Margin="0,0,0,20"/>
             <TextBlock Text="{Binding ExportStatus}" Style="{StaticResource SecondaryText}" Margin="0,-14,0,20"/>
 
             <TextBlock Text="最近 7 天鼠标活动" Style="{StaticResource SectionTitleText}"/>
@@ -109,6 +139,10 @@
             <lvc:CartesianChart Height="176" Series="{Binding TrendSeries}" XAxes="{Binding TrendXAxes}"
                                 YAxes="{Binding TrendYAxes}" LegendPosition="Hidden" TooltipPosition="Top"
                                 ZoomMode="None" AnimationsSpeed="0:0:0" Background="Transparent"/>
+            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                <TextBlock Text="{Binding DataStateText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                <Button Content="刷新" Command="{Binding RetryCommand}" Margin="12,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -375,6 +375,39 @@ public sealed class StatisticsRepository : IStatisticsRepository
         return Task.CompletedTask;
     }
 
+    public Task ClearStatisticsRangeAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (to < from) (from, to) = (to, from);
+        using var connection = _factory.Open();
+        using var transaction = connection.BeginTransaction();
+        foreach (var table in new[]
+                 {
+                     "daily_key_stats", "daily_shortcut_stats", "daily_mouse_stats",
+                     "hourly_activity_stats", "daily_app_stats", "hourly_click_points", "daily_pointer_density"
+                 })
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $"DELETE FROM {table} WHERE stat_date BETWEEN $from AND $to;";
+            command.Parameters.AddWithValue("$from", Format(from));
+            command.Parameters.AddWithValue("$to", Format(to));
+            command.ExecuteNonQuery();
+        }
+
+        using (var orphanApps = connection.CreateCommand())
+        {
+            orphanApps.Transaction = transaction;
+            orphanApps.CommandText = "DELETE FROM app_registry WHERE app_id NOT IN (SELECT DISTINCT app_id FROM daily_app_stats);";
+            orphanApps.ExecuteNonQuery();
+        }
+        transaction.Commit();
+        return Task.CompletedTask;
+    }
+
     public Task ClearPositionDataAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -396,6 +429,32 @@ public sealed class StatisticsRepository : IStatisticsRepository
             Execute(connection, "ROLLBACK;");
             throw;
         }
+        return Task.CompletedTask;
+    }
+
+    public Task PrunePositionDataAsync(DateOnly beforeDate, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        using var transaction = connection.BeginTransaction();
+        foreach (var table in new[] { "hourly_click_points", "daily_pointer_density" })
+        {
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = $"DELETE FROM {table} WHERE stat_date < $before;";
+            command.Parameters.AddWithValue("$before", Format(beforeDate));
+            command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+        return Task.CompletedTask;
+    }
+
+    public Task ClearOccupancyDataAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        Execute(connection, "DELETE FROM pointer_occupancy_tiles;");
         return Task.CompletedTask;
     }
 

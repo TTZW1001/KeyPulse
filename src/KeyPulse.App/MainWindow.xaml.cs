@@ -26,6 +26,19 @@ public partial class MainWindow : Window
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => _viewModel.Refresh();
         Loaded += OnLoaded;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                _timer.Start();
+                _viewModel.SetWindowVisible(true);
+            }
+            else
+            {
+                _timer.Stop();
+                _viewModel.SetWindowVisible(false);
+            }
+        };
         Closed += (_, _) =>
         {
             _timer.Stop();
@@ -40,6 +53,7 @@ public partial class MainWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _timer.Start();
+        _viewModel.SetWindowVisible(true);
         _theme.Changed += OnThemeChanged;
         _theme.ApplyCaption(this);
     }

@@ -8,7 +8,8 @@ public sealed record DashboardToday(
     double DistancePixels,
     string? TopKey,
     long TopKeyCount,
-    TrackingState State);
+    TrackingState State,
+    double EstimatedDistanceMeters = 0);
 
 public sealed record DailyTrendPoint(
     DateOnly Date,
@@ -29,3 +30,14 @@ public sealed record HourlyPoint(
 
     public long ActivityCount => KeyPressCount + MouseClickCount + WheelEventCount;
 }
+
+public sealed record DashboardInsights(
+    int? PeakHour,
+    long PeakActivity,
+    string? TopShortcut,
+    long TopShortcutCount,
+    string? TopApp,
+    long TodayActivity,
+    double PreviousDailyAverage,
+    DateOnly? RecordDate,
+    long RecordActivity);

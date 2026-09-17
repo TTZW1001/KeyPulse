@@ -10,7 +10,7 @@ public interface IPointerHeatmapQuery
         CancellationToken cancellationToken = default);
 }
 
-public sealed record PointerClickPoint(string MonitorId, int X, int Y, long Count);
+public sealed record PointerClickPoint(string MonitorId, int X, int Y, long Count, string ButtonCode = "All");
 
 public sealed record PointerDensityGrid(
     string MonitorId,

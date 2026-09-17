@@ -117,6 +117,10 @@
                     </DataTemplate></ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                <TextBlock Text="{Binding DataStateText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                <Button Content="刷新" Command="{Binding RetryCommand}" Margin="12,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

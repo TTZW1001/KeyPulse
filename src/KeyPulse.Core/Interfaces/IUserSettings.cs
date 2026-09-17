@@ -14,5 +14,9 @@ public interface IUserSettings
 
     bool ScreenPositionStatsEnabled { get; set; }
 
+    int PositionRetentionDays { get => 0; set { } }
+
+    bool ShowInsights { get => true; set { } }
+
     void Save();
 }

@@ -20,4 +20,6 @@ public interface IStatisticsAggregator
     void Clear();
 
     void ClearPositionData();
+
+    void ClearOccupancyData() { }
 }

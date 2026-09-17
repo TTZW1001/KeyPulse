@@ -50,7 +50,7 @@ public sealed class PointerHeatmapQueryService : IPointerHeatmapQuery
         return Task.FromResult<PointerHeatmapResult?>(new PointerHeatmapResult(
             layout,
             clicks.Select(pair => new PointerClickPoint(
-                pair.Key.MonitorId, pair.Key.X, pair.Key.Y, pair.Value)).ToList(),
+                pair.Key.MonitorId, pair.Key.X, pair.Key.Y, pair.Value, pair.Key.ButtonCode)).ToList(),
             densities.Select(pair => new PointerDensityGrid(
                 pair.Key, pair.Value.Width, pair.Value.Height, pair.Value.Cells)).ToList(),
             coverages,
@@ -115,23 +115,23 @@ public sealed class PointerHeatmapQueryService : IPointerHeatmapQuery
         return new DisplayLayout(signature, left, top, width, height, monitors);
     }
 
-    private static Dictionary<(string MonitorId, int X, int Y), long> ReadClicks(
+    private static Dictionary<(string MonitorId, int X, int Y, string ButtonCode), long> ReadClicks(
         Microsoft.Data.Sqlite.SqliteConnection connection, string signature, DateOnly from, DateOnly to)
     {
-        var result = new Dictionary<(string, int, int), long>();
+        var result = new Dictionary<(string, int, int, string), long>();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT c.monitor_id, c.x_px, c.y_px, SUM(c.click_count)
+            SELECT c.monitor_id, c.x_px, c.y_px, c.button_code, SUM(c.click_count)
             FROM hourly_click_points c
             JOIN display_layouts l ON l.layout_id = c.layout_id
             WHERE l.layout_signature = $signature AND c.stat_date BETWEEN $from AND $to
-            GROUP BY c.monitor_id, c.x_px, c.y_px;
+            GROUP BY c.monitor_id, c.x_px, c.y_px, c.button_code;
             """;
         command.Parameters.AddWithValue("$signature", signature);
         command.Parameters.AddWithValue("$from", from.ToString("yyyy-MM-dd"));
         command.Parameters.AddWithValue("$to", to.ToString("yyyy-MM-dd"));
         using var reader = command.ExecuteReader();
-        while (reader.Read()) result[(reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2))] = reader.GetInt64(3);
+        while (reader.Read()) result[(reader.GetString(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3))] = reader.GetInt64(4);
         return result;
     }
 
@@ -209,14 +209,14 @@ public sealed class PointerHeatmapQueryService : IPointerHeatmapQuery
 
     private static void MergeUnflushed(
         PointerStatistics live, string signature, DateOnly from, DateOnly to,
-        Dictionary<(string MonitorId, int X, int Y), long> clicks,
+        Dictionary<(string MonitorId, int X, int Y, string ButtonCode), long> clicks,
         Dictionary<string, PointerDensityData> densities,
         Dictionary<(string MonitorId, int TileX, int TileY), OccupancyTileData> occupancy)
     {
         foreach (var click in live.Clicks)
         {
             if (click.Key.LayoutSignature != signature || click.Key.Date < from || click.Key.Date > to) continue;
-            var key = (click.Key.MonitorId, click.Key.X, click.Key.Y);
+            var key = (click.Key.MonitorId, click.Key.X, click.Key.Y, click.Key.ButtonCode);
             clicks[key] = clicks.GetValueOrDefault(key) + click.Value;
         }
         foreach (var density in live.Densities)

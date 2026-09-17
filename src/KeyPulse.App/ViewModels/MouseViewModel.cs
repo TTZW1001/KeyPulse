@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -36,6 +37,9 @@ public sealed partial class MouseViewModel : ObservableObject
     private DateOnly _chartsDate;
     private KeyboardRange _range = KeyboardRange.Last7Days;
     private KeyboardRange _heatmapRange = KeyboardRange.Last7Days;
+    private PointerHeatmapResult? _pointerResult;
+    private DateTime? _lastSuccessfulUpdate;
+    private bool _isActive;
 
     public MouseViewModel(
         IMouseQuery query,
@@ -61,6 +65,7 @@ public sealed partial class MouseViewModel : ObservableObject
             Refresh();
         };
         BuildChart(Array.Empty<MouseDayPoint>());
+        SelectedButton = ButtonOptions[0];
     }
 
     [ObservableProperty] private string _leftText = "0";
@@ -99,6 +104,26 @@ public sealed partial class MouseViewModel : ObservableObject
     [ObservableProperty] private BitmapSource? _coverageHeatmapImage;
     [ObservableProperty] private string _coverageText = "暂无轨迹数据";
     [ObservableProperty] private string _exportStatus = string.Empty;
+    [ObservableProperty] private string _dataStateText = "正在加载…";
+    [ObservableProperty] private HeatmapFilterOption? _selectedMonitor;
+    [ObservableProperty] private HeatmapFilterOption? _selectedButton;
+    [ObservableProperty] private bool _useRelativeIntensity = true;
+    [ObservableProperty] private bool _useLogScale;
+    [ObservableProperty] private bool _showClickLayer = true;
+    [ObservableProperty] private bool _showTrajectoryLayer = true;
+    [ObservableProperty] private bool _showCoverageLayer = true;
+    [ObservableProperty] private string _heatmapLegendText = "暂无样本";
+
+    public ObservableCollection<HeatmapFilterOption> MonitorOptions { get; } = [];
+    public ObservableCollection<HeatmapFilterOption> ButtonOptions { get; } =
+    [
+        new("全部按键", null),
+        new("左键", "Left"),
+        new("右键", "Right"),
+        new("中键", "Middle"),
+        new("侧键 X1", "XButton1"),
+        new("侧键 X2", "XButton2")
+    ];
 
     public bool ScreenPositionStatsEnabled
     {
@@ -174,8 +199,15 @@ public sealed partial class MouseViewModel : ObservableObject
 
     public void Refresh()
     {
+        if (!_isActive) return;
         OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
         _ = RefreshAsync();
+    }
+
+    public void SetActive(bool active)
+    {
+        _isActive = active;
+        if (active) Refresh();
     }
 
     public async Task RefreshAsync()
@@ -212,11 +244,15 @@ public sealed partial class MouseViewModel : ObservableObject
                     _chartsDate = today;
                     _chartsStale = false;
                 }
+                _lastSuccessfulUpdate = DateTime.Now;
+                DataStateText = "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
             });
         }
         catch
         {
-            // keep last values
+            await _dispatcher.InvokeAsync(() => DataStateText = _lastSuccessfulUpdate is { } updated
+                ? "刷新失败，当前为 " + updated.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + " 的数据"
+                : "首次加载失败，请重试");
         }
         finally
         {
@@ -226,6 +262,9 @@ public sealed partial class MouseViewModel : ObservableObject
             }
         }
     }
+
+    [RelayCommand]
+    private Task Retry() => RefreshAsync();
 
     private void SetRange(KeyboardRange range)
     {
@@ -312,6 +351,7 @@ public sealed partial class MouseViewModel : ObservableObject
 
     private void ApplyPointer(PointerHeatmapResult? result)
     {
+        _pointerResult = result;
         if (result is null)
         {
             ClickHeatmapImage = null;
@@ -321,11 +361,61 @@ public sealed partial class MouseViewModel : ObservableObject
             return;
         }
 
-        ClickHeatmapImage = RenderHeatmap(result, HeatmapMode.Clicks);
-        TrajectoryHeatmapImage = RenderHeatmap(result, HeatmapMode.Trajectory);
-        CoverageHeatmapImage = RenderHeatmap(result, HeatmapMode.Coverage);
+        var selectedMonitorId = SelectedMonitor?.Value;
+        MonitorOptions.Clear();
+        MonitorOptions.Add(new HeatmapFilterOption("全部显示器", null));
+        foreach (var monitor in result.Layout.Monitors)
+        {
+            MonitorOptions.Add(new HeatmapFilterOption(
+                monitor.IsPrimary
+                    ? $"主屏 · {monitor.Width}×{monitor.Height}"
+                    : $"{monitor.Id} · {monitor.Width}×{monitor.Height}",
+                monitor.Id));
+        }
+        SelectedMonitor = MonitorOptions.FirstOrDefault(item => item.Value == selectedMonitorId) ?? MonitorOptions[0];
+        RenderPointerImages();
         var percent = result.TotalPixels <= 0 ? 0 : result.VisitedPixels * 100.0 / result.TotalPixels;
         CoverageText = $"累计像素覆盖（全部时间）：光标中心路径已经过 {percent:0.00}% · 未经过 {100 - percent:0.00}%";
+    }
+
+    partial void OnSelectedMonitorChanged(HeatmapFilterOption? value) => RenderPointerImages();
+
+    partial void OnSelectedButtonChanged(HeatmapFilterOption? value) => RenderPointerImages();
+
+    partial void OnUseRelativeIntensityChanged(bool value) => RenderPointerImages();
+
+    partial void OnUseLogScaleChanged(bool value) => RenderPointerImages();
+
+    private void RenderPointerImages()
+    {
+        if (_pointerResult is null) return;
+        var monitor = SelectedMonitor?.Value;
+        ClickHeatmapImage = RenderHeatmap(
+            _pointerResult, HeatmapMode.Clicks, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale);
+        TrajectoryHeatmapImage = RenderHeatmap(
+            _pointerResult, HeatmapMode.Trajectory, monitor, null, UseRelativeIntensity, UseLogScale);
+        CoverageHeatmapImage = RenderHeatmap(
+            _pointerResult, HeatmapMode.Coverage, monitor, null, UseRelativeIntensity, UseLogScale);
+        var clicks = _pointerResult.Clicks.Where(point =>
+            (monitor is null || point.MonitorId == monitor) &&
+            (SelectedButton?.Value is null || point.ButtonCode == SelectedButton.Value)).Sum(point => point.Count);
+        var samples = _pointerResult.Densities.Where(grid => monitor is null || grid.MonitorId == monitor)
+            .Sum(grid => grid.Cells.Sum(cell => (long)cell));
+        HeatmapLegendText = $"{RangeTitle(_heatmapRange)} · {SelectedMonitor?.Label ?? "全部显示器"} · " +
+                            $"点击 {clicks:N0} · 轨迹样本 {samples:N0} · " +
+                            $"{(UseRelativeIntensity ? "当前视图强度" : "全局强度")} / {(UseLogScale ? "对数色阶" : "线性色阶")}";
+    }
+
+    [RelayCommand]
+    private async Task ResetCoverageAsync()
+    {
+        var confirm = System.Windows.MessageBox.Show(
+            "只重置累计覆盖挑战；点击散点和每日轨迹数据会保留。是否继续？",
+            ProductInfo.Name, System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Warning, System.Windows.MessageBoxResult.No);
+        if (confirm != System.Windows.MessageBoxResult.Yes) return;
+        await _flush.ClearOccupancyDataAsync().ConfigureAwait(true);
+        CoverageText = "累计覆盖已重置。继续移动鼠标后会重新累计。";
     }
 
     [RelayCommand]
@@ -521,7 +611,13 @@ public sealed partial class MouseViewModel : ObservableObject
         return null;
     }
 
-    private static BitmapSource RenderHeatmap(PointerHeatmapResult result, HeatmapMode mode)
+    private static BitmapSource RenderHeatmap(
+        PointerHeatmapResult result,
+        HeatmapMode mode,
+        string? monitorFilter = null,
+        string? buttonFilter = null,
+        bool relativeIntensity = true,
+        bool useLogScale = false)
     {
         const int maxDimension = 720;
         var scale = Math.Min(
@@ -532,6 +628,7 @@ public sealed partial class MouseViewModel : ObservableObject
         var pixels = new byte[width * height * 4];
         foreach (var monitor in result.Layout.Monitors)
         {
+            if (monitorFilter is not null && monitor.Id != monitorFilter) continue;
             var left = (monitor.Left - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
             var top = (monitor.Top - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
             var right = (monitor.Left + monitor.Width - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
@@ -541,24 +638,36 @@ public sealed partial class MouseViewModel : ObservableObject
 
         if (mode == HeatmapMode.Clicks)
         {
-            var max = Math.Max(1L, result.Clicks.Count == 0 ? 1 : result.Clicks.Max(point => point.Count));
-            foreach (var point in result.Clicks)
+            var visibleClicks = result.Clicks.Where(point =>
+                (monitorFilter is null || point.MonitorId == monitorFilter) &&
+                (buttonFilter is null || point.ButtonCode == buttonFilter)).ToArray();
+            var max = relativeIntensity
+                ? Math.Max(1L, visibleClicks.Length == 0 ? 1 : visibleClicks.Max(point => point.Count))
+                : Math.Max(1L, result.Clicks.Count == 0 ? 1 : result.Clicks.Max(point => point.Count));
+            foreach (var point in visibleClicks)
             {
                 var monitor = result.Layout.Monitors.FirstOrDefault(item => item.Id == point.MonitorId);
                 if (monitor is null) continue;
                 var x = (monitor.Left + point.X - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
                 var y = (monitor.Top + point.Y - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
-                DrawDot(pixels, width, height, x, y, 7, Math.Log(1 + point.Count) / Math.Log(1 + max));
+                DrawDot(pixels, width, height, x, y, 7, ScaleIntensity(point.Count, max, useLogScale));
             }
         }
         else
         {
             var grids = mode == HeatmapMode.Trajectory
                 ? result.Densities.Select(grid => (grid.MonitorId, grid.Width, grid.Height,
-                    Values: grid.Cells.Select(value => (double)value).ToArray())).ToList()
+                    Values: grid.Cells.Select(value => (double)value).ToArray()))
+                    .Where(grid => monitorFilter is null || grid.MonitorId == monitorFilter).ToList()
                 : result.Coverages.Select(grid => (grid.MonitorId, grid.Width, grid.Height,
-                    Values: grid.Cells.Select(value => (double)value).ToArray())).ToList();
-            var max = Math.Max(1.0, grids.SelectMany(grid => grid.Values).DefaultIfEmpty(1).Max());
+                    Values: grid.Cells.Select(value => (double)value).ToArray()))
+                    .Where(grid => monitorFilter is null || grid.MonitorId == monitorFilter).ToList();
+            var globalValues = mode == HeatmapMode.Trajectory
+                ? result.Densities.SelectMany(grid => grid.Cells.Select(value => (double)value))
+                : result.Coverages.SelectMany(grid => grid.Cells.Select(value => (double)value));
+            var max = relativeIntensity
+                ? Math.Max(1.0, grids.SelectMany(grid => grid.Values).DefaultIfEmpty(1).Max())
+                : Math.Max(1.0, globalValues.DefaultIfEmpty(1).Max());
             foreach (var grid in grids)
             {
                 var monitor = result.Layout.Monitors.FirstOrDefault(item => item.Id == grid.MonitorId);
@@ -573,7 +682,7 @@ public sealed partial class MouseViewModel : ObservableObject
                     var x1 = (monitor.Left + (((gx + 1) * monitor.Width + grid.Width - 1) / grid.Width) - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
                     var y1 = (monitor.Top + (((gy + 1) * monitor.Height + grid.Height - 1) / grid.Height) - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
                     FillHeatCell(pixels, width, height, x0, y0, Math.Max(x0 + 1, x1), Math.Max(y0 + 1, y1),
-                        mode == HeatmapMode.Trajectory ? Math.Log(1 + value) / Math.Log(1 + max) : value / max);
+                        mode == HeatmapMode.Trajectory ? ScaleIntensity(value, max, useLogScale) : value / max);
                 }
             }
         }
@@ -630,6 +739,10 @@ public sealed partial class MouseViewModel : ObservableObject
         (byte)(from.G + ((to.G - from.G) * t)),
         (byte)(from.B + ((to.B - from.B) * t)));
 
+    private static double ScaleIntensity(double value, double maximum, bool logarithmic) => logarithmic
+        ? Math.Log(1 + value) / Math.Log(1 + Math.Max(1, maximum))
+        : value / Math.Max(1, maximum);
+
     private static Media.SolidColorBrush NewBrush(Media.Color color)
     {
         var brush = new Media.SolidColorBrush(color); brush.Freeze(); return brush;
@@ -637,3 +750,5 @@ public sealed partial class MouseViewModel : ObservableObject
 
     private enum HeatmapMode { Clicks, Trajectory, Coverage }
 }
+
+public sealed record HeatmapFilterOption(string Label, string? Value);

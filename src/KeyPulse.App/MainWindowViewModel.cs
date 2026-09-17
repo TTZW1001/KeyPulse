@@ -25,6 +25,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly object _trendsPage;
     private readonly object _appsPage;
     private readonly object _settingsPage;
+    private bool _windowVisible;
 
     public MainWindowViewModel(
         IStatisticsAggregator aggregator,
@@ -52,6 +53,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _trendsPage = trends;
         _appsPage = apps;
         _settingsPage = settings;
+        _dashboard.TrendDetailRequested += date =>
+        {
+            _trends.ShowDate(date);
+            Navigate(AppPage.Trends);
+        };
 
         NavigationItems = NavigationCatalog.Items;
         SelectedItem = NavigationItems[0];
@@ -86,10 +92,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SelectedItem = item;
     }
 
+    public void SetWindowVisible(bool visible)
+    {
+        _windowVisible = visible;
+        UpdatePageActivation();
+    }
+
     public void Refresh()
     {
-        _dashboard.Refresh();
-        if (SelectedItem.Page == AppPage.Keyboard)
+        if (SelectedItem.Page == AppPage.Dashboard)
+        {
+            _dashboard.Refresh();
+        }
+        else if (SelectedItem.Page == AppPage.Keyboard)
         {
             _keyboard.Refresh();
         }
@@ -165,7 +180,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             AppPage.Settings => _settingsPage,
             _ => _dashboardPage
         };
-        if (value.Page == AppPage.Keyboard)
+        if (value.Page == AppPage.Dashboard)
+        {
+            _dashboard.Refresh();
+        }
+        else if (value.Page == AppPage.Keyboard)
         {
             _keyboard.Refresh();
         }
@@ -189,5 +208,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             _settings.Refresh();
         }
+        UpdatePageActivation();
+    }
+
+    private void UpdatePageActivation()
+    {
+        _dashboard.SetActive(_windowVisible && SelectedItem.Page == AppPage.Dashboard);
+        _keyboard.SetActive(_windowVisible && SelectedItem.Page == AppPage.Keyboard);
+        _mouse.SetActive(_windowVisible && SelectedItem.Page == AppPage.Mouse);
+        _trends.SetActive(_windowVisible && SelectedItem.Page == AppPage.Trends);
+        _apps.SetActive(_windowVisible && SelectedItem.Page == AppPage.Apps);
     }
 }

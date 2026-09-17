@@ -52,11 +52,10 @@
             <CheckBox Content="记录屏幕位置热力图"
                       IsChecked="{Binding ScreenPositionStatsEnabled, Mode=TwoWay}"
                       AutomationProperties.AutomationId="ScreenPositionStatsEnabled"/>
+            <CheckBox Content="在总览显示今日小结和个人纪录"
+                      IsChecked="{Binding ShowInsights, Mode=TwoWay}"/>
             <TextBlock Text="只保存本机坐标统计，不截屏，不记录窗口名称或输入内容。"
                        Style="{StaticResource SecondaryText}" Margin="22,0,0,8" TextWrapping="Wrap"/>
-            <Button Content="清除位置数据" Command="{Binding ClearPositionDataCommand}"
-                    HorizontalAlignment="Left" AutomationProperties.AutomationId="ClearPositionDataButton"/>
-
             <TextBlock Text="输入诊断" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>
             <CheckBox Content="临时显示原始键盘事件"
@@ -163,16 +162,51 @@
                        Style="{StaticResource SecondaryText}"
                        Margin="0,8,0,12"/>
 
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="数据库" Style="{StaticResource SecondaryText}"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DatabasePath}" TextWrapping="Wrap"/>
+                <TextBlock Grid.Row="1" Text="占用空间" Style="{StaticResource SecondaryText}"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DatabaseSizeText}"/>
+                <TextBlock Grid.Row="2" Text="数据日期" Style="{StaticResource SecondaryText}"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DateRangeText}"/>
+                <TextBlock Grid.Row="3" Text="最近写入 / 状态" Style="{StaticResource SecondaryText}"/>
+                <TextBlock Grid.Row="3" Grid.Column="1">
+                    <Run Text="{Binding LastFlushText}"/><Run Text=" · "/><Run Text="{Binding WriteHealthText}"/>
+                </TextBlock>
+            </Grid>
+
+            <TextBlock Text="位置明细保留" Style="{StaticResource SettingRowLabel}" Margin="0,0,0,6"/>
+            <WrapPanel Margin="0,0,0,8">
+                <RadioButton Content="30 天" GroupName="Retention" IsChecked="{Binding IsRetention30Days, Mode=TwoWay}"/>
+                <RadioButton Content="90 天" GroupName="Retention" IsChecked="{Binding IsRetention90Days, Mode=TwoWay}"/>
+                <RadioButton Content="1 年" GroupName="Retention" IsChecked="{Binding IsRetention365Days, Mode=TwoWay}"/>
+                <RadioButton Content="永久" GroupName="Retention" Margin="0" IsChecked="{Binding IsRetentionForever, Mode=TwoWay}"/>
+            </WrapPanel>
+            <TextBlock Text="只清理点击散点和轨迹密度历史；累计像素覆盖不会自动删除，可用“清除位置数据”重置。"
+                       Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Content="导出 CSV"
                         Command="{Binding ExportCommand}"
                         AutomationProperties.AutomationId="ExportButton"/>
+                <Button Content="备份" Command="{Binding BackupCommand}" Margin="12,0,0,0"/>
+                <Button Content="恢复" Command="{Binding RestoreCommand}" Margin="12,0,0,0"/>
+                <Button Content="整理空间" Command="{Binding VacuumCommand}" Margin="12,0,0,0"/>
                 <Button Content="清空统计数据"
                         Command="{Binding ClearStatsCommand}"
                         Style="{StaticResource DangerButton}"
                         Margin="12,0,0,0"
                         AutomationProperties.AutomationId="ClearStatsButton"/>
             </StackPanel>
+            <WrapPanel Margin="0,0,0,8">
+                <Button Content="清除今天" Command="{Binding ClearRangeCommand}" CommandParameter="today"/>
+                <Button Content="清除最近 30 天" Command="{Binding ClearRangeCommand}" CommandParameter="30days" Margin="12,0,0,0"/>
+                <Button Content="清除位置数据" Command="{Binding ClearPositionDataCommand}" Margin="12,0,0,0"/>
+            </WrapPanel>
             <TextBlock Text="{Binding DataStatus}"
                        Style="{StaticResource SecondaryText}"
                        AutomationProperties.AutomationId="DataStatus"/>

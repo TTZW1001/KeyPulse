@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddSingleton<ITrendQuery, TrendQueryService>();
         services.AddSingleton<IAppQuery, AppQueryService>();
         services.AddSingleton<IStatisticsExport, StatisticsExportService>();
+        services.AddSingleton<IDataMaintenanceService, DataMaintenanceService>();
         return services;
     }
 }

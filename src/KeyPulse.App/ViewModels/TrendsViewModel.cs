@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
@@ -26,6 +27,8 @@ public sealed partial class TrendsViewModel : ObservableObject
     private readonly object _gate = new();
     private bool _busy;
     private bool _suspendCustom;
+    private DateTime? _lastSuccessfulUpdate;
+    private bool _isActive;
 
     public TrendsViewModel(ITrendQuery query, IFlushService flush, ThemeService theme)
     {
@@ -71,6 +74,9 @@ public sealed partial class TrendsViewModel : ObservableObject
     [ObservableProperty]
     private string _rangeCaption = string.Empty;
 
+    [ObservableProperty]
+    private string _dataStateText = "正在加载…";
+
     [ObservableProperty] private ISeries[] _keySeries = [];
     [ObservableProperty] private Axis[] _keyXAxes = [];
     [ObservableProperty] private Axis[] _keyYAxes = [];
@@ -84,7 +90,27 @@ public sealed partial class TrendsViewModel : ObservableObject
     [ObservableProperty] private Axis[] _hourlyXAxes = [];
     [ObservableProperty] private Axis[] _hourlyYAxes = [];
 
-    public void Refresh() => _ = RefreshAsync();
+    public void SetActive(bool active)
+    {
+        _isActive = active;
+        if (active) Refresh();
+    }
+
+    public void Refresh()
+    {
+        if (_isActive) _ = RefreshAsync();
+    }
+
+    public void ShowDate(DateOnly date)
+    {
+        _suspendCustom = true;
+        CustomFromDate = date.ToDateTime(TimeOnly.MinValue);
+        CustomToDate = date.ToDateTime(TimeOnly.MinValue);
+        SelectedRange = RangeOptions.Single(option => option.Kind == TrendRangeKind.Custom);
+        IsCustomRange = true;
+        _suspendCustom = false;
+        Refresh();
+    }
 
     public async Task RefreshAsync()
     {
@@ -122,11 +148,21 @@ public sealed partial class TrendsViewModel : ObservableObject
                     + to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
                 ApplyCharts(daily, hourly);
                 IsLoading = false;
+                _lastSuccessfulUpdate = DateTime.Now;
+                DataStateText = daily.Count == 0
+                    ? "所选范围暂无数据 · 更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture)
+                    : "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
             });
         }
         catch
         {
-            await _dispatcher.InvokeAsync(() => IsLoading = false);
+            await _dispatcher.InvokeAsync(() =>
+            {
+                IsLoading = false;
+                DataStateText = _lastSuccessfulUpdate is { } updated
+                    ? "刷新失败，当前为 " + updated.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + " 的数据"
+                    : "首次加载失败，请重试";
+            });
         }
         finally
         {
@@ -136,6 +172,9 @@ public sealed partial class TrendsViewModel : ObservableObject
             }
         }
     }
+
+    [RelayCommand]
+    private Task Retry() => RefreshAsync();
 
     partial void OnSelectedRangeChanged(TrendRangeOption value)
     {

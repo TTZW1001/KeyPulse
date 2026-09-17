@@ -19,6 +19,8 @@ public sealed partial class AppsViewModel : ObservableObject
     private readonly object _gate = new();
     private bool _busy;
     private KeyboardRange _range = KeyboardRange.Last7Days;
+    private DateTime? _lastSuccessfulUpdate;
+    private bool _isActive;
 
     public AppsViewModel(IAppQuery query, IFlushService flush, IExcludedAppList exclusions)
     {
@@ -38,6 +40,9 @@ public sealed partial class AppsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _excludedSummary = string.Empty;
+
+    [ObservableProperty]
+    private string _dataStateText = "正在加载…";
 
     public bool IsTodayRange
     {
@@ -63,7 +68,28 @@ public sealed partial class AppsViewModel : ObservableObject
         }
     }
 
-    public void Refresh() => _ = RefreshAsync();
+    public bool IsLast30DaysRange
+    {
+        get => _range == KeyboardRange.Last30Days;
+        set { if (value) SetRange(KeyboardRange.Last30Days); }
+    }
+
+    public bool IsAllRange
+    {
+        get => _range == KeyboardRange.All;
+        set { if (value) SetRange(KeyboardRange.All); }
+    }
+
+    public void SetActive(bool active)
+    {
+        _isActive = active;
+        if (active) Refresh();
+    }
+
+    public void Refresh()
+    {
+        if (_isActive) _ = RefreshAsync();
+    }
 
     public async Task RefreshAsync()
     {
@@ -80,14 +106,21 @@ public sealed partial class AppsViewModel : ObservableObject
         try
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
-            var from = _range == KeyboardRange.Today ? today : today.AddDays(-6);
+            var from = _range.GetStartDate(today);
             var ranking = await _query.GetRankingAsync(from, today).ConfigureAwait(false);
             var excluded = _exclusions.Snapshot();
-            await _dispatcher.InvokeAsync(() => Apply(ranking, excluded));
+            await _dispatcher.InvokeAsync(() =>
+            {
+                Apply(ranking, excluded);
+                _lastSuccessfulUpdate = DateTime.Now;
+                DataStateText = "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+            });
         }
         catch
         {
-            // keep last rows
+            await _dispatcher.InvokeAsync(() => DataStateText = _lastSuccessfulUpdate is { } updated
+                ? "刷新失败，当前为 " + updated.ToString("HH:mm:ss", CultureInfo.CurrentCulture) + " 的数据"
+                : "首次加载失败，请重试");
         }
         finally
         {
@@ -97,6 +130,9 @@ public sealed partial class AppsViewModel : ObservableObject
             }
         }
     }
+
+    [RelayCommand]
+    private Task Retry() => RefreshAsync();
 
     [RelayCommand]
     private void Exclude(AppRankItem? item)
@@ -119,6 +155,8 @@ public sealed partial class AppsViewModel : ObservableObject
         _range = range;
         OnPropertyChanged(nameof(IsTodayRange));
         OnPropertyChanged(nameof(IsLast7DaysRange));
+        OnPropertyChanged(nameof(IsLast30DaysRange));
+        OnPropertyChanged(nameof(IsAllRange));
         Refresh();
     }
 

@@ -11,6 +11,8 @@ internal static class RawInputNativeMethods
     public const int SM_YVIRTUALSCREEN = 77;
     public const int SM_CXVIRTUALSCREEN = 78;
     public const int SM_CYVIRTUALSCREEN = 79;
+    public const int SM_CXDRAG = 68;
+    public const int SM_CYDRAG = 69;
     public const uint MONITORINFOF_PRIMARY = 0x00000001;
     public const uint RID_INPUT = 0x10000003;
     public const uint RIDEV_INPUTSINK = 0x00000100;
@@ -27,10 +29,15 @@ internal static class RawInputNativeMethods
     public const ushort VK_PROCESSKEY = 0xE5;
 
     public const ushort RI_MOUSE_LEFT_BUTTON_DOWN = 0x0001;
+    public const ushort RI_MOUSE_LEFT_BUTTON_UP = 0x0002;
     public const ushort RI_MOUSE_RIGHT_BUTTON_DOWN = 0x0004;
+    public const ushort RI_MOUSE_RIGHT_BUTTON_UP = 0x0008;
     public const ushort RI_MOUSE_MIDDLE_BUTTON_DOWN = 0x0010;
+    public const ushort RI_MOUSE_MIDDLE_BUTTON_UP = 0x0020;
     public const ushort RI_MOUSE_BUTTON_4_DOWN = 0x0040;
+    public const ushort RI_MOUSE_BUTTON_4_UP = 0x0080;
     public const ushort RI_MOUSE_BUTTON_5_DOWN = 0x0100;
+    public const ushort RI_MOUSE_BUTTON_5_UP = 0x0200;
     public const ushort RI_MOUSE_WHEEL = 0x0400;
     public const ushort RI_MOUSE_HWHEEL = 0x0800;
     public const ushort MOUSE_MOVE_ABSOLUTE = 0x01;

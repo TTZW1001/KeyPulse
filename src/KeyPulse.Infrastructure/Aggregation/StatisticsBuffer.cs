@@ -125,6 +125,8 @@ internal sealed class StatisticsBuffer
         _occupancyTiles.Clear();
     }
 
+    public void ClearOccupancyData() => _occupancyTiles.Clear();
+
     public StatisticsSnapshot ToSnapshot(TrackingState state)
     {
         var keys = new Dictionary<string, long>(StringComparer.Ordinal);

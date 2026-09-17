@@ -18,11 +18,15 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
     private readonly DatabaseInitializer _initializer;
     private readonly PersistenceOptions _options;
     private readonly ILogger<FlushService> _logger;
+    private readonly IUserSettings? _settings;
     private readonly SemaphoreSlim _flushLock = new(1, 1);
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
     private int _failures;
     private int _writeError;
+    private DateOnly? _lastRetentionCleanup;
+
+    public DateTimeOffset? LastSuccessfulFlush { get; private set; }
 
     public event Action? Flushed;
 
@@ -35,12 +39,14 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
         IStatisticsRepository repository,
         DatabaseInitializer initializer,
         PersistenceOptions options,
-        ILogger<FlushService> logger)
+        ILogger<FlushService> logger,
+        IUserSettings? settings = null)
     {
         _aggregator = aggregator;
         _repository = repository;
         _initializer = initializer;
         _options = options;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -116,6 +122,15 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
 
             _failures = 0;
             ClearWriteError();
+            LastSuccessfulFlush = DateTimeOffset.Now;
+            try
+            {
+                await ApplyRetentionPolicyAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Position-data retention cleanup failed; persisted statistics remain valid");
+            }
             _logger.LogInformation("Flush succeeded");
             RaiseSafely(Flushed, "Flush notification failed");
         }
@@ -143,6 +158,25 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
         }
     }
 
+    public async Task ClearStatisticsRangeAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        await _flushLock.WaitAsync(cancellationToken);
+        try
+        {
+            await _repository.ClearStatisticsRangeAsync(from, to, cancellationToken);
+            _aggregator.Clear();
+            _logger.LogInformation("Statistics cleared for {From} through {To}", from, to);
+            RaiseSafely(Flushed, "Range-clear notification failed");
+        }
+        finally
+        {
+            _flushLock.Release();
+        }
+    }
+
     public async Task ClearPositionDataAsync(CancellationToken cancellationToken = default)
     {
         await _flushLock.WaitAsync(cancellationToken);
@@ -152,6 +186,37 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
             _aggregator.ClearPositionData();
             _logger.LogInformation("Pointer position statistics cleared");
             RaiseSafely(Flushed, "Clear-position notification failed");
+        }
+        finally
+        {
+            _flushLock.Release();
+        }
+    }
+
+    public async Task RunExclusiveAsync(
+        Func<CancellationToken, Task> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+        await _flushLock.WaitAsync(cancellationToken);
+        try
+        {
+            await operation(cancellationToken);
+        }
+        finally
+        {
+            _flushLock.Release();
+        }
+    }
+
+    public async Task ClearOccupancyDataAsync(CancellationToken cancellationToken = default)
+    {
+        await _flushLock.WaitAsync(cancellationToken);
+        try
+        {
+            await _repository.ClearOccupancyDataAsync(cancellationToken);
+            _aggregator.ClearOccupancyData();
+            RaiseSafely(Flushed, "Clear-occupancy notification failed");
         }
         finally
         {
@@ -242,5 +307,18 @@ public sealed class FlushService : IFlushService, IHostedService, IDisposable
 
         var index = Math.Min(_failures, RetryDelays.Length) - 1;
         return RetryDelays[index];
+    }
+
+    private async Task ApplyRetentionPolicyAsync(CancellationToken cancellationToken)
+    {
+        var days = _settings?.PositionRetentionDays ?? 0;
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        if (days <= 0 || _lastRetentionCleanup == today)
+        {
+            return;
+        }
+
+        await _repository.PrunePositionDataAsync(today.AddDays(-days + 1), cancellationToken);
+        _lastRetentionCleanup = today;
     }
 }

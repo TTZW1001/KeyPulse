@@ -15,4 +15,6 @@ public interface IDashboardQuery
     Task<IReadOnlyList<HourlyPoint>> GetTodayHourlyAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<HourlyPoint>> GetTodayHourlyAsync(DateOnly date, CancellationToken cancellationToken = default);
+
+    Task<DashboardInsights> GetInsightsAsync(DateOnly date, CancellationToken cancellationToken = default);
 }
