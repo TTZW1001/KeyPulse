@@ -42,6 +42,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
         _flush = flush;
         _theme = theme;
         _settings = settings;
+        _range = settings.KeyboardRange;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _flush.Flushed += OnFlushed;
         _theme.Changed += OnThemeChanged;
@@ -221,6 +222,8 @@ public sealed partial class KeyboardViewModel : ObservableObject
         }
 
         _range = range;
+        _settings.KeyboardRange = range;
+        _settings.Save();
         OnPropertyChanged(nameof(IsTodayRange));
         OnPropertyChanged(nameof(IsLast7DaysRange));
         OnPropertyChanged(nameof(IsLast30DaysRange));

@@ -341,4 +341,144 @@
         <Setter Property="Margin" Value="0,6,0,14"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
     </Style>
+
+    <Style x:Key="FilterGroupLabel" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <Style TargetType="DatePickerTextBox">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="10,5"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePickerTextBox">
+                    <Grid>
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Background="Transparent"
+                                      VerticalAlignment="Center"/>
+                        <ContentControl x:Name="PART_Watermark"
+                                        Content="选择日期"
+                                        Foreground="{DynamicResource SecondaryTextBrush}"
+                                        IsHitTestVisible="False"
+                                        Padding="10,5"
+                                        Visibility="Collapsed"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="PART_Watermark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DatePicker">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource BodyFontSize}"/>
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Grid>
+                        <Border x:Name="DateBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="34"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePickerTextBox x:Name="PART_TextBox"
+                                                   Grid.Column="0"
+                                                   Foreground="{TemplateBinding Foreground}"
+                                                   HorizontalContentAlignment="Stretch"
+                                                   VerticalContentAlignment="Center"/>
+                                <Button x:Name="PART_Button"
+                                        Grid.Column="1"
+                                        Focusable="False"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="0"
+                                        Margin="0"
+                                        ToolTip="打开日历"
+                                        AutomationProperties.Name="打开日历">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="CalendarButtonBorder" Background="Transparent" CornerRadius="0,6,6,0">
+                                                <Path Data="M2,4 L12,4 L12,13 L2,13 Z M4,2 L4,6 M10,2 L10,6 M2,7 L12,7"
+                                                      Stroke="{DynamicResource SecondaryTextBrush}"
+                                                      StrokeThickness="1.25"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      Stretch="Uniform"
+                                                      Width="14" Height="14"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="CalendarButtonBorder" Property="Background" Value="{DynamicResource NavHoverBrush}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter TargetName="CalendarButtonBorder" Property="Background" Value="{DynamicResource NavSelectedBrush}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                        </Border>
+                        <Popup x:Name="PART_Popup"
+                               Placement="Bottom"
+                               PlacementTarget="{Binding ElementName=PART_TextBox}"
+                               AllowsTransparency="True"
+                               StaysOpen="False">
+                            <Border Background="{DynamicResource ContentBackgroundBrush}"
+                                    BorderBrush="{DynamicResource ControlBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    Padding="4"
+                                    Margin="0,4,0,0">
+                                <Calendar x:Name="PART_Calendar"
+                                          Background="{DynamicResource ContentBackgroundBrush}"
+                                          Foreground="{DynamicResource PrimaryTextBrush}"
+                                          BorderThickness="0"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="DateBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="DateBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter TargetName="DateBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Setter TargetName="DateBorder" Property="Background" Value="{DynamicResource NavHoverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

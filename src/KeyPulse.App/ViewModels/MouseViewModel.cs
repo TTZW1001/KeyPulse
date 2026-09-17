@@ -53,6 +53,8 @@ public sealed partial class MouseViewModel : ObservableObject
         _flush = flush;
         _theme = theme;
         _settings = settings;
+        _range = settings.MouseRange;
+        _heatmapRange = settings.MouseHeatmapRange;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _flush.Flushed += () =>
         {
@@ -197,6 +199,30 @@ public sealed partial class MouseViewModel : ObservableObject
         set { if (value) SetHeatmapRange(KeyboardRange.All); }
     }
 
+    public bool IsRelativeIntensity
+    {
+        get => UseRelativeIntensity;
+        set { if (value) UseRelativeIntensity = true; }
+    }
+
+    public bool IsGlobalIntensity
+    {
+        get => !UseRelativeIntensity;
+        set { if (value) UseRelativeIntensity = false; }
+    }
+
+    public bool IsLinearScale
+    {
+        get => !UseLogScale;
+        set { if (value) UseLogScale = false; }
+    }
+
+    public bool IsLogarithmicScale
+    {
+        get => UseLogScale;
+        set { if (value) UseLogScale = true; }
+    }
+
     public void Refresh()
     {
         if (!_isActive) return;
@@ -274,6 +300,8 @@ public sealed partial class MouseViewModel : ObservableObject
         }
 
         _range = range;
+        _settings.MouseRange = range;
+        _settings.Save();
         _chartsStale = true;
         OnPropertyChanged(nameof(IsTodayRange));
         OnPropertyChanged(nameof(IsLast7DaysRange));
@@ -286,6 +314,8 @@ public sealed partial class MouseViewModel : ObservableObject
     {
         if (_heatmapRange == range) return;
         _heatmapRange = range;
+        _settings.MouseHeatmapRange = range;
+        _settings.Save();
         OnPropertyChanged(nameof(IsHeatmapTodayRange));
         OnPropertyChanged(nameof(IsHeatmapLast7DaysRange));
         OnPropertyChanged(nameof(IsHeatmapLast30DaysRange));
@@ -382,9 +412,19 @@ public sealed partial class MouseViewModel : ObservableObject
 
     partial void OnSelectedButtonChanged(HeatmapFilterOption? value) => RenderPointerImages();
 
-    partial void OnUseRelativeIntensityChanged(bool value) => RenderPointerImages();
+    partial void OnUseRelativeIntensityChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsRelativeIntensity));
+        OnPropertyChanged(nameof(IsGlobalIntensity));
+        RenderPointerImages();
+    }
 
-    partial void OnUseLogScaleChanged(bool value) => RenderPointerImages();
+    partial void OnUseLogScaleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsLinearScale));
+        OnPropertyChanged(nameof(IsLogarithmicScale));
+        RenderPointerImages();
+    }
 
     private void RenderPointerImages()
     {

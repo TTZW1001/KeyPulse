@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P23 — V1.2 local insights, data governance, and input accuracy
+Current Phase: P24 — V1.2.1 interface consistency and preference persistence
 
 ## Completed
 
@@ -28,10 +28,11 @@ Current Phase: P23 — V1.2 local insights, data governance, and input accuracy
 - P21 V1.1.4 global-hotkey diagnostics and modifier recovery
 - P22 V1.1.5 suppressed key-down hotkey recovery
 - P23 V1.2.0 local insights, data governance, and input accuracy
+- P24 V1.2.1 interface consistency and preference persistence
 
 ## Last Verified Commit
 
-V1.2.0 release candidate — verified with 151 Release tests
+V1.2.1 release candidate — verified with 153 Release tests
 
 ## Known Issues
 

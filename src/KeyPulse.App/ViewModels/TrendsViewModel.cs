@@ -23,6 +23,7 @@ public sealed partial class TrendsViewModel : ObservableObject
     private readonly ITrendQuery _query;
     private readonly IFlushService _flush;
     private readonly ThemeService _theme;
+    private readonly IUserSettings _settings;
     private readonly Dispatcher _dispatcher;
     private readonly object _gate = new();
     private bool _busy;
@@ -30,16 +31,24 @@ public sealed partial class TrendsViewModel : ObservableObject
     private DateTime? _lastSuccessfulUpdate;
     private bool _isActive;
 
-    public TrendsViewModel(ITrendQuery query, IFlushService flush, ThemeService theme)
+    public TrendsViewModel(
+        ITrendQuery query,
+        IFlushService flush,
+        ThemeService theme,
+        IUserSettings settings)
     {
         _query = query;
         _flush = flush;
         _theme = theme;
+        _settings = settings;
         _dispatcher = Dispatcher.CurrentDispatcher;
         var today = DateTime.Today;
-        _customFromDate = today.AddDays(-6);
-        _customToDate = today;
-        _selectedRange = RangeOptions[2];
+        _customFromDate = (settings.TrendCustomFromDate ?? DateOnly.FromDateTime(today.AddDays(-6)))
+            .ToDateTime(TimeOnly.MinValue);
+        _customToDate = (settings.TrendCustomToDate ?? DateOnly.FromDateTime(today))
+            .ToDateTime(TimeOnly.MinValue);
+        _selectedRange = RangeOptions.First(option => option.Kind == settings.TrendRange);
+        _isCustomRange = _selectedRange.Kind == TrendRangeKind.Custom;
         _flush.Flushed += Refresh;
         _theme.Changed += Refresh;
         ApplyEmptyCharts();
@@ -109,6 +118,7 @@ public sealed partial class TrendsViewModel : ObservableObject
         SelectedRange = RangeOptions.Single(option => option.Kind == TrendRangeKind.Custom);
         IsCustomRange = true;
         _suspendCustom = false;
+        SaveRangeSettings();
         Refresh();
     }
 
@@ -179,6 +189,12 @@ public sealed partial class TrendsViewModel : ObservableObject
     partial void OnSelectedRangeChanged(TrendRangeOption value)
     {
         IsCustomRange = value.Kind == TrendRangeKind.Custom;
+        if (_suspendCustom)
+        {
+            return;
+        }
+
+        SaveRangeSettings();
         Refresh();
     }
 
@@ -190,6 +206,7 @@ public sealed partial class TrendsViewModel : ObservableObject
         }
 
         ClampCustom();
+        SaveRangeSettings();
         Refresh();
     }
 
@@ -201,7 +218,25 @@ public sealed partial class TrendsViewModel : ObservableObject
         }
 
         ClampCustom();
+        SaveRangeSettings();
         Refresh();
+    }
+
+    private void SaveRangeSettings()
+    {
+        if (_suspendCustom)
+        {
+            return;
+        }
+
+        _settings.TrendRange = SelectedRange.Kind;
+        _settings.TrendCustomFromDate = CustomFromDate is { } from
+            ? DateOnly.FromDateTime(from)
+            : null;
+        _settings.TrendCustomToDate = CustomToDate is { } to
+            ? DateOnly.FromDateTime(to)
+            : null;
+        _settings.Save();
     }
 
     private void ClampCustom()

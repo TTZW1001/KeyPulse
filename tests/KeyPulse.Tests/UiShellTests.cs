@@ -88,4 +88,92 @@ public class UiShellTests
             }
         }
     }
+
+    [Fact]
+    public void UserSettings_ViewPreferences_DefaultAndRoundTripIndependently()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "KeyPulseTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var paths = new AppPaths(root);
+            var settings = new JsonUserSettings(paths);
+            Assert.Equal(KeyboardRange.Last7Days, settings.KeyboardRange);
+            Assert.Equal(KeyboardRange.Last7Days, settings.MouseRange);
+            Assert.Equal(KeyboardRange.Last7Days, settings.MouseHeatmapRange);
+            Assert.Equal(KeyboardRange.Last7Days, settings.AppsRange);
+            Assert.Equal(TrendRangeKind.Last7Days, settings.TrendRange);
+            Assert.Null(settings.TrendCustomFromDate);
+            Assert.Null(settings.TrendCustomToDate);
+            Assert.Equal(DashboardTrendMetric.Keys, settings.DashboardTrendMetric);
+
+            settings.KeyboardRange = KeyboardRange.Today;
+            settings.MouseRange = KeyboardRange.Last30Days;
+            settings.MouseHeatmapRange = KeyboardRange.All;
+            settings.AppsRange = KeyboardRange.Today;
+            settings.TrendRange = TrendRangeKind.Custom;
+            settings.TrendCustomFromDate = new DateOnly(2026, 9, 10);
+            settings.TrendCustomToDate = new DateOnly(2026, 9, 16);
+            settings.DashboardTrendMetric = DashboardTrendMetric.Clicks;
+            settings.Save();
+
+            var loaded = new JsonUserSettings(paths);
+            Assert.Equal(KeyboardRange.Today, loaded.KeyboardRange);
+            Assert.Equal(KeyboardRange.Last30Days, loaded.MouseRange);
+            Assert.Equal(KeyboardRange.All, loaded.MouseHeatmapRange);
+            Assert.Equal(KeyboardRange.Today, loaded.AppsRange);
+            Assert.Equal(TrendRangeKind.Custom, loaded.TrendRange);
+            Assert.Equal(new DateOnly(2026, 9, 10), loaded.TrendCustomFromDate);
+            Assert.Equal(new DateOnly(2026, 9, 16), loaded.TrendCustomToDate);
+            Assert.Equal(DashboardTrendMetric.Clicks, loaded.DashboardTrendMetric);
+
+            var json = File.ReadAllText(paths.SettingsPath);
+            Assert.Contains("\"keyboardRange\": \"Today\"", json, StringComparison.Ordinal);
+            Assert.Contains("\"trendCustomFromDate\": \"2026-09-10\"", json, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void UserSettings_InvalidNewPreferences_FallBackWithoutLosingExistingSettings()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "KeyPulseTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var paths = new AppPaths(root);
+            Directory.CreateDirectory(paths.ConfigDirectory);
+            File.WriteAllText(paths.SettingsPath, """
+                {
+                  "theme": "Dark",
+                  "keyboardLayout": "FullSize",
+                  "keyboardRange": "SomethingNew",
+                  "mouseRange": "Today",
+                  "trendRange": "Unsupported",
+                  "trendCustomFromDate": "not-a-date",
+                  "dashboardTrendMetric": "Unknown"
+                }
+                """);
+
+            var settings = new JsonUserSettings(paths);
+            Assert.Equal(ThemeMode.Dark, settings.Theme);
+            Assert.Equal(KeyboardLayoutKind.FullSize, settings.KeyboardLayout);
+            Assert.Equal(KeyboardRange.Last7Days, settings.KeyboardRange);
+            Assert.Equal(KeyboardRange.Today, settings.MouseRange);
+            Assert.Equal(TrendRangeKind.Last7Days, settings.TrendRange);
+            Assert.Null(settings.TrendCustomFromDate);
+            Assert.Equal(DashboardTrendMetric.Keys, settings.DashboardTrendMetric);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
 }

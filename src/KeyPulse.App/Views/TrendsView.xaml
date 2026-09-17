@@ -10,8 +10,15 @@
             <TextBlock Text="{Binding DataStateText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
             <Button Content="刷新" Command="{Binding RetryCommand}" Margin="12,0,0,0"/>
         </StackPanel>
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-            <ComboBox DockPanel.Dock="Right"
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Grid.Row="0" Grid.Column="0"
+                       Text="{Binding RangeCaption}"
+                       Style="{StaticResource SecondaryText}"
+                       VerticalAlignment="Center"
+                       AutomationProperties.AutomationId="TrendCaption"/>
+            <ComboBox Grid.Row="0" Grid.Column="1"
                       Width="168"
                       ItemsSource="{Binding RangeOptions}"
                       SelectedItem="{Binding SelectedRange}"
@@ -24,25 +31,28 @@
                     </Style>
                 </ComboBox.ItemContainerStyle>
             </ComboBox>
-            <StackPanel DockPanel.Dock="Right"
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                         Orientation="Horizontal"
-                        Margin="0,0,12,0"
+                        HorizontalAlignment="Right"
+                        Margin="0,12,0,0"
                         VerticalAlignment="Center"
                         Visibility="{Binding IsCustomRange, Converter={StaticResource BoolToVis}}">
-                <DatePicker Width="118"
+                <TextBlock Text="从" Style="{StaticResource SecondaryText}"
+                           Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <DatePicker Width="152"
                             SelectedDate="{Binding CustomFromDate, Mode=TwoWay}"
+                            SelectedDateFormat="Short"
+                            AutomationProperties.Name="自定义开始日期"
                             AutomationProperties.AutomationId="TrendFrom"/>
-                <TextBlock Text="～" Style="{StaticResource SecondaryText}"
-                           Margin="8,0" VerticalAlignment="Center"/>
-                <DatePicker Width="118"
+                <TextBlock Text="至" Style="{StaticResource SecondaryText}"
+                           Margin="12,0,8,0" VerticalAlignment="Center"/>
+                <DatePicker Width="152"
                             SelectedDate="{Binding CustomToDate, Mode=TwoWay}"
+                            SelectedDateFormat="Short"
+                            AutomationProperties.Name="自定义结束日期"
                             AutomationProperties.AutomationId="TrendTo"/>
             </StackPanel>
-            <TextBlock Text="{Binding RangeCaption}"
-                       Style="{StaticResource SecondaryText}"
-                       VerticalAlignment="Center"
-                       AutomationProperties.AutomationId="TrendCaption"/>
-        </DockPanel>
+        </Grid>
         <TextBlock DockPanel.Dock="Top"
                    Text="正在加载"
                    Style="{StaticResource SecondaryText}"

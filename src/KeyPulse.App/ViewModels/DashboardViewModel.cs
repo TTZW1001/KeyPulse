@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
+using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure.Persistence;
@@ -42,6 +43,7 @@ public sealed partial class DashboardViewModel : ObservableObject
         _flush = flush;
         _theme = theme;
         _settings = settings;
+        _trendMetric = settings.DashboardTrendMetric;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _flush.Flushed += OnFlushed;
         _theme.Changed += OnThemeChanged;
@@ -248,7 +250,7 @@ public sealed partial class DashboardViewModel : ObservableObject
         var hourLabels = new string[24];
         for (var hour = 0; hour < 24; hour++)
         {
-            hourLabels[hour] = hour % 3 == 0 ? hour.ToString("00", CultureInfo.InvariantCulture) : string.Empty;
+            hourLabels[hour] = hour.ToString("00", CultureInfo.InvariantCulture);
             if (hour < hours.Count)
             {
                 hourKeys[hour] = hours[hour].KeyPressCount;
@@ -338,7 +340,7 @@ public sealed partial class DashboardViewModel : ObservableObject
             {
                 Labels = hourLabels,
                 TextSize = 11,
-                MinStep = 1,
+                MinStep = 3,
                 ForceStepToMin = true,
                 LabelsPaint = text,
                 SeparatorsPaint = new SolidColorPaint(SKColors.Transparent)
@@ -375,12 +377,8 @@ public sealed partial class DashboardViewModel : ObservableObject
     private static string FormatPoint(ChartPoint point) =>
         point.Coordinate.PrimaryValue.ToString("N0", CultureInfo.CurrentCulture);
 
-    private static string FormatHourlyPoint(ChartPoint point)
-    {
-        var hour = Math.Clamp((int)Math.Round(point.Coordinate.SecondaryValue), 0, 23);
-        return $"{hour:00}:00–{hour:00}:59 · " +
-               point.Coordinate.PrimaryValue.ToString("N0", CultureInfo.CurrentCulture);
-    }
+    private static string FormatHourlyPoint(ChartPoint point) =>
+        point.Coordinate.PrimaryValue.ToString("N0", CultureInfo.CurrentCulture);
 
     private static string FormatDistance(double pixels)
     {
@@ -427,6 +425,8 @@ public sealed partial class DashboardViewModel : ObservableObject
         OnPropertyChanged(nameof(IsKeysTrend));
         OnPropertyChanged(nameof(IsClicksTrend));
         OnPropertyChanged(nameof(IsWheelTrend));
+        _settings.DashboardTrendMetric = value;
+        _settings.Save();
         if (_trendPoints.Count > 0)
         {
             BuildCharts(_trendPoints, _hourlyPoints);
@@ -461,11 +461,4 @@ public sealed partial class DashboardViewModel : ObservableObject
         _chartsStale = true;
         Refresh();
     }
-}
-
-public enum DashboardTrendMetric
-{
-    Keys,
-    Clicks,
-    Wheel
 }

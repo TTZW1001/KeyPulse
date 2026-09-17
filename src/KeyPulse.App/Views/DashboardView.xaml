@@ -72,9 +72,10 @@
             </UniformGrid>
             </StackPanel>
 
-            <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="最近 7 天活动趋势" Style="{StaticResource SectionTitleText}"/>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="最近 7 天活动趋势" Style="{StaticResource SectionTitleText}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <RadioButton Content="按键" GroupName="DashboardTrend"
                                  IsChecked="{Binding IsKeysTrend, Mode=TwoWay}"/>
                     <RadioButton Content="点击" GroupName="DashboardTrend"
@@ -82,7 +83,7 @@
                     <RadioButton Content="滚轮" GroupName="DashboardTrend" Margin="0"
                                  IsChecked="{Binding IsWheelTrend, Mode=TwoWay}"/>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
             <Border Style="{StaticResource SectionDivider}"/>
             <lvc:CartesianChart Height="176"
                                 Margin="0,0,0,8"
@@ -102,9 +103,10 @@
                     Margin="0,2,0,8"
                     AutomationProperties.HelpText="与点击趋势图数据点进入详情的操作相同"/>
 
-            <DockPanel Margin="0,16,0,0">
-                <TextBlock DockPanel.Dock="Left" Text="今日活跃时段" Style="{StaticResource SectionTitleText}"/>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="今日活跃时段" Style="{StaticResource SectionTitleText}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Ellipse Width="8" Height="8" Fill="#4E6E9E" Margin="0,0,6,0"/>
                     <TextBlock Text="键盘" Style="{StaticResource SecondaryText}" Margin="0,0,16,0"/>
                     <Ellipse Width="8" Height="8" Fill="#5F9998" Margin="0,0,6,0"/>
@@ -112,7 +114,7 @@
                     <Ellipse Width="8" Height="8" Fill="#A7B3C5" Margin="0,0,6,0"/>
                     <TextBlock Text="滚轮" Style="{StaticResource SecondaryText}"/>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
             <Border Style="{StaticResource SectionDivider}"/>
             <lvc:CartesianChart Height="160"
                                 Margin="0,0,0,8"

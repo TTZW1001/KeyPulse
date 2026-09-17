@@ -15,6 +15,7 @@ public sealed partial class AppsViewModel : ObservableObject
     private readonly IAppQuery _query;
     private readonly IFlushService _flush;
     private readonly IExcludedAppList _exclusions;
+    private readonly IUserSettings _settings;
     private readonly Dispatcher _dispatcher;
     private readonly object _gate = new();
     private bool _busy;
@@ -22,11 +23,17 @@ public sealed partial class AppsViewModel : ObservableObject
     private DateTime? _lastSuccessfulUpdate;
     private bool _isActive;
 
-    public AppsViewModel(IAppQuery query, IFlushService flush, IExcludedAppList exclusions)
+    public AppsViewModel(
+        IAppQuery query,
+        IFlushService flush,
+        IExcludedAppList exclusions,
+        IUserSettings settings)
     {
         _query = query;
         _flush = flush;
         _exclusions = exclusions;
+        _settings = settings;
+        _range = settings.AppsRange;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _flush.Flushed += Refresh;
         _exclusions.Changed += Refresh;
@@ -153,6 +160,8 @@ public sealed partial class AppsViewModel : ObservableObject
         }
 
         _range = range;
+        _settings.AppsRange = range;
+        _settings.Save();
         OnPropertyChanged(nameof(IsTodayRange));
         OnPropertyChanged(nameof(IsLast7DaysRange));
         OnPropertyChanged(nameof(IsLast30DaysRange));

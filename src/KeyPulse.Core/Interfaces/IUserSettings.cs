@@ -18,5 +18,21 @@ public interface IUserSettings
 
     bool ShowInsights { get => true; set { } }
 
+    KeyboardRange KeyboardRange { get => KeyboardRange.Last7Days; set { } }
+
+    KeyboardRange MouseRange { get => KeyboardRange.Last7Days; set { } }
+
+    KeyboardRange MouseHeatmapRange { get => KeyboardRange.Last7Days; set { } }
+
+    KeyboardRange AppsRange { get => KeyboardRange.Last7Days; set { } }
+
+    TrendRangeKind TrendRange { get => TrendRangeKind.Last7Days; set { } }
+
+    DateOnly? TrendCustomFromDate { get => null; set { } }
+
+    DateOnly? TrendCustomToDate { get => null; set { } }
+
+    DashboardTrendMetric DashboardTrendMetric { get => DashboardTrendMetric.Keys; set { } }
+
     void Save();
 }

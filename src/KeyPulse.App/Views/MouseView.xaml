@@ -92,33 +92,50 @@
                 </StackPanel>
             </Grid>
             <Border Style="{StaticResource SectionDivider}"/>
-            <WrapPanel Margin="0,0,0,12">
-                <ComboBox ItemsSource="{Binding MonitorOptions}"
-                          SelectedItem="{Binding SelectedMonitor}"
-                          DisplayMemberPath="Label"
-                          MinWidth="200"
-                          Margin="0,0,10,0"
-                          AutomationProperties.Name="显示器筛选"/>
-                <ComboBox ItemsSource="{Binding ButtonOptions}"
-                          SelectedItem="{Binding SelectedButton}"
-                          DisplayMemberPath="Label"
-                          MinWidth="140"
-                          Margin="0,0,10,0"
-                          AutomationProperties.Name="点击按键筛选"/>
-                <CheckBox Content="按当前视图归一化强度"
-                          IsChecked="{Binding UseRelativeIntensity, Mode=TwoWay}"
-                          ToolTip="关闭后使用全局强度尺度，便于跨显示器比较"/>
-                <CheckBox Content="对数色阶"
-                          IsChecked="{Binding UseLogScale, Mode=TwoWay}"
-                          ToolTip="数据跨度很大时可开启；默认使用线性色阶"/>
-            </WrapPanel>
-            <WrapPanel Margin="0,0,0,8">
-                <CheckBox Content="点击图层" IsChecked="{Binding ShowClickLayer, Mode=TwoWay}"/>
-                <CheckBox Content="轨迹图层" IsChecked="{Binding ShowTrajectoryLayer, Mode=TwoWay}"/>
-                <CheckBox Content="覆盖挑战" IsChecked="{Binding ShowCoverageLayer, Mode=TwoWay}"/>
+            <WrapPanel Margin="0,0,0,4">
+                <StackPanel Margin="0,0,28,16">
+                    <TextBlock Text="筛选" Style="{StaticResource FilterGroupLabel}"/>
+                    <WrapPanel>
+                        <ComboBox ItemsSource="{Binding MonitorOptions}"
+                                  SelectedItem="{Binding SelectedMonitor}"
+                                  DisplayMemberPath="Label"
+                                  MinWidth="200"
+                                  Margin="0,0,12,0"
+                                  AutomationProperties.Name="显示器筛选"/>
+                        <ComboBox ItemsSource="{Binding ButtonOptions}"
+                                  SelectedItem="{Binding SelectedButton}"
+                                  DisplayMemberPath="Label"
+                                  MinWidth="140"
+                                  AutomationProperties.Name="点击按键筛选"/>
+                    </WrapPanel>
+                </StackPanel>
+                <StackPanel Margin="0,0,28,16">
+                    <TextBlock Text="图层" Style="{StaticResource FilterGroupLabel}"/>
+                    <WrapPanel>
+                        <CheckBox Content="点击" Margin="0,0,20,0" IsChecked="{Binding ShowClickLayer, Mode=TwoWay}"/>
+                        <CheckBox Content="轨迹" Margin="0,0,20,0" IsChecked="{Binding ShowTrajectoryLayer, Mode=TwoWay}"/>
+                        <CheckBox Content="覆盖挑战" Margin="0" IsChecked="{Binding ShowCoverageLayer, Mode=TwoWay}"/>
+                    </WrapPanel>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,16">
+                    <TextBlock Text="显示" Style="{StaticResource FilterGroupLabel}"/>
+                    <WrapPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,28,0">
+                            <TextBlock Text="强度" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <RadioButton Content="当前视图" GroupName="HeatmapIntensity" IsChecked="{Binding IsRelativeIntensity, Mode=TwoWay}"/>
+                            <RadioButton Content="全局尺度" GroupName="HeatmapIntensity" Margin="0" IsChecked="{Binding IsGlobalIntensity, Mode=TwoWay}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="色阶" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <RadioButton Content="线性" GroupName="HeatmapScale" IsChecked="{Binding IsLinearScale, Mode=TwoWay}"/>
+                            <RadioButton Content="对数" GroupName="HeatmapScale" Margin="0" IsChecked="{Binding IsLogarithmicScale, Mode=TwoWay}"/>
+                        </StackPanel>
+                    </WrapPanel>
+                </StackPanel>
             </WrapPanel>
             <TextBlock Text="{Binding HeatmapLegendText}" Style="{StaticResource SecondaryText}"
-                       TextWrapping="Wrap" Margin="0,0,0,10"/>
+                       TextWrapping="Wrap" Margin="0,0,0,14"/>
+            <Border Style="{StaticResource SectionDivider}" Margin="0,0,0,14"/>
             <CheckBox Content="记录屏幕位置热力图"
                       IsChecked="{Binding ScreenPositionStatsEnabled, Mode=TwoWay}"/>
             <TextBlock Text="只保存本机坐标统计，不截屏，不记录窗口名称或输入内容。关闭后仍可查看已有数据。"
