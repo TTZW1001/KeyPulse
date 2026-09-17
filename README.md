@@ -8,6 +8,40 @@ KeyPulse 是一款面向 Windows 的本地键盘与鼠标使用统计工具。�
 快捷键、鼠标点击、滚轮、真实屏幕像素移动距离、趋势和应用维度统计，并通过简洁的
 WPF 界面展示结果。
 
+## 界面预览
+
+<p align="center">
+  <img src="assets/screenshots/dashboard.png" alt="KeyPulse 总览页面" width="900" />
+</p>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/keyboard-heatmap.png" alt="键盘按键热力图" /><br />
+      <sub>键盘按键热力图</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/mouse-heatmaps.png" alt="鼠标点击、轨迹与覆盖热力图" /><br />
+      <sub>鼠标点击、轨迹与覆盖热力图</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/trends.png" alt="键盘与鼠标趋势页面" /><br />
+      <sub>键盘与鼠标趋势</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/app-usage.png" alt="前台应用使用统计" /><br />
+      <sub>前台应用使用统计</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="assets/screenshots/dark-mode.png" alt="KeyPulse 深色模式" width="900" /><br />
+  <sub>深色模式</sub>
+</p>
+
 ## 隐私边界
 
 KeyPulse 默认只保存聚合后的次数和时长，不记录：
