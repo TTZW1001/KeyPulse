@@ -75,17 +75,21 @@ public sealed class PointerHeatmapRenderer
 
                 var reveal = Math.Clamp(mask[(y * width) + x], 0, 1);
                 var cleared = SmoothStep(0.06, 0.96, reveal);
-                var sharpness = SmoothStep(0.16, 0.82, reveal);
-                var fogAlpha = 0.965 * (1 - Math.Pow(cleared, 0.86));
                 var luminance = (0.114 * blurred[index]) + (0.587 * blurred[index + 1]) +
                                 (0.299 * blurred[index + 2]);
-                var fog = Math.Clamp(234 + ((luminance - 128) * 0.045), 226, 240);
-                var imageB = Mix(blurred[index], source[index], sharpness);
-                var imageG = Mix(blurred[index + 1], source[index + 1], sharpness);
-                var imageR = Mix(blurred[index + 2], source[index + 2], sharpness);
-                output[index] = Blend(imageB, fog, fogAlpha);
-                output[index + 1] = Blend(imageG, fog, fogAlpha);
-                output[index + 2] = Blend(imageR, fog, fogAlpha);
+                const double retainedColor = 0.18;
+                const double coldBrightness = 0.64;
+                const double neutralGray = 145;
+                const double neutralGrayMix = 0.38;
+                var frostedB = Mix(Mix(luminance, blurred[index], retainedColor) * coldBrightness,
+                    neutralGray, neutralGrayMix);
+                var frostedG = Mix(Mix(luminance, blurred[index + 1], retainedColor) * coldBrightness,
+                    neutralGray, neutralGrayMix);
+                var frostedR = Mix(Mix(luminance, blurred[index + 2], retainedColor) * coldBrightness,
+                    neutralGray, neutralGrayMix);
+                output[index] = ToByte(Mix(frostedB, source[index], cleared));
+                output[index + 1] = ToByte(Mix(frostedG, source[index + 1], cleared));
+                output[index + 2] = ToByte(Mix(frostedR, source[index + 2], cleared));
                 output[index + 3] = 0xFF;
             }
         return CreateBitmap(output, width, height);
@@ -245,8 +249,8 @@ public sealed class PointerHeatmapRenderer
         return image;
     }
 
-    private static byte Blend(double from, double to, double amount) =>
-        (byte)Math.Clamp(Math.Round(Mix(from, to, amount)), 0, 255);
+    private static byte ToByte(double value) =>
+        (byte)Math.Clamp(Math.Round(value), 0, 255);
 
     private static double Mix(double from, double to, double amount) =>
         from + ((to - from) * Math.Clamp(amount, 0, 1));
