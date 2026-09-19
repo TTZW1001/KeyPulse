@@ -6,7 +6,8 @@
 
 KeyPulse 是一款面向 Windows 的本地键盘与鼠标使用统计工具。它在后台聚合按键次数、
 快捷键、鼠标点击、滚轮、真实屏幕像素移动距离、趋势和应用维度统计，并通过简洁的
-WPF 界面展示结果。
+WPF 界面展示结果。1.3 进一步加入按 AFK 判定的有效使用时长、活动会话、周报/月报、
+长期变化，以及可使用本地图片的屏幕活动揭示；所有统计与图片资源仍只保存在本机。
 
 ## 界面预览
 
@@ -17,22 +18,32 @@ WPF 界面展示结果。
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/screenshots/keyboard-heatmap.png" alt="键盘按键热力图" /><br />
-      <sub>键盘按键热力图</sub>
+      <img src="assets/screenshots/mouse-heatmaps.png" alt="鼠标点击、轨迹与图片揭示" /><br />
+      <sub>点击、轨迹与灰色磨砂图片揭示</sub>
     </td>
     <td width="50%" align="center">
-      <img src="assets/screenshots/mouse-heatmaps.png" alt="鼠标点击、轨迹与覆盖热力图" /><br />
-      <sub>鼠标点击、轨迹与覆盖热力图</sub>
+      <img src="assets/screenshots/reports.png" alt="KeyPulse 活动报告" /><br />
+      <sub>周报、月报与 PNG / HTML 导出</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/screenshots/trends.png" alt="键盘与鼠标趋势页面" /><br />
-      <sub>键盘与鼠标趋势</sub>
+      <img src="assets/screenshots/keyboard-heatmap.png" alt="键盘按键热力图" /><br />
+      <sub>可切换色系的键盘按键热力图</sub>
     </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/trends.png" alt="键盘与鼠标趋势页面" /><br />
+      <sub>键盘、点击、滚轮与有效时长趋势</sub>
+    </td>
+  </tr>
+  <tr>
     <td width="50%" align="center">
       <img src="assets/screenshots/app-usage.png" alt="前台应用使用统计" /><br />
       <sub>前台应用使用统计</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/settings.png" alt="KeyPulse 设置页面" /><br />
+      <sub>主题、热力图色系与本地屏幕图片</sub>
     </td>
   </tr>
 </table>
