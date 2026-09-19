@@ -231,7 +231,7 @@
                 <TextBox Grid.Row="1" Grid.Column="1" Width="56" HorizontalAlignment="Left"
                          Text="{Binding AutoBackupRetentionCount, UpdateSourceTrigger=LostFocus}"/>
                 <TextBlock Grid.Row="2" Text="保存位置" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AutoBackupDirectory}" IsReadOnly="True"
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AutoBackupDirectory, Mode=OneWay}" IsReadOnly="True"
                          Style="{StaticResource ReadOnlyPathBox}" Margin="0,0,8,0"/>
                 <Button Grid.Row="2" Grid.Column="2" Content="更改" Command="{Binding BrowseAutoBackupDirectoryCommand}"/>
             </Grid>
