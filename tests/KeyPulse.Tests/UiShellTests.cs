@@ -7,9 +7,9 @@ namespace KeyPulse.Tests;
 public class UiShellTests
 {
     [Fact]
-    public void NavigationCatalog_HasSixPagesInOrder()
+    public void NavigationCatalog_HasSevenPagesInOrder()
     {
-        Assert.Equal(6, NavigationCatalog.Items.Count);
+        Assert.Equal(7, NavigationCatalog.Items.Count);
         Assert.Equal(
             new[]
             {
@@ -17,12 +17,13 @@ public class UiShellTests
                 AppPage.Keyboard,
                 AppPage.Mouse,
                 AppPage.Trends,
+                AppPage.Reports,
                 AppPage.Apps,
                 AppPage.Settings
             },
             NavigationCatalog.Items.Select(item => item.Page).ToArray());
         Assert.Equal(
-            new[] { "总览", "键盘", "鼠标", "趋势", "应用", "设置" },
+            new[] { "总览", "键盘", "鼠标", "趋势", "报告", "应用", "设置" },
             NavigationCatalog.Items.Select(item => item.Title).ToArray());
     }
 
@@ -105,6 +106,10 @@ public class UiShellTests
             Assert.Null(settings.TrendCustomFromDate);
             Assert.Null(settings.TrendCustomToDate);
             Assert.Equal(DashboardTrendMetric.Keys, settings.DashboardTrendMetric);
+            Assert.Equal(5, settings.AfkThresholdMinutes);
+            Assert.False(settings.AutoBackupEnabled);
+            Assert.Equal(5, settings.AutoBackupRetentionCount);
+            Assert.Equal(HeatmapPalette.Ocean, settings.HeatmapPalette);
 
             settings.KeyboardRange = KeyboardRange.Today;
             settings.MouseRange = KeyboardRange.Last30Days;
@@ -114,6 +119,10 @@ public class UiShellTests
             settings.TrendCustomFromDate = new DateOnly(2026, 9, 10);
             settings.TrendCustomToDate = new DateOnly(2026, 9, 16);
             settings.DashboardTrendMetric = DashboardTrendMetric.Clicks;
+            settings.AfkThresholdMinutes = 12;
+            settings.AutoBackupEnabled = true;
+            settings.AutoBackupRetentionCount = 8;
+            settings.HeatmapPalette = HeatmapPalette.Forest;
             settings.Save();
 
             var loaded = new JsonUserSettings(paths);
@@ -125,6 +134,10 @@ public class UiShellTests
             Assert.Equal(new DateOnly(2026, 9, 10), loaded.TrendCustomFromDate);
             Assert.Equal(new DateOnly(2026, 9, 16), loaded.TrendCustomToDate);
             Assert.Equal(DashboardTrendMetric.Clicks, loaded.DashboardTrendMetric);
+            Assert.Equal(12, loaded.AfkThresholdMinutes);
+            Assert.True(loaded.AutoBackupEnabled);
+            Assert.Equal(8, loaded.AutoBackupRetentionCount);
+            Assert.Equal(HeatmapPalette.Forest, loaded.HeatmapPalette);
 
             var json = File.ReadAllText(paths.SettingsPath);
             Assert.Contains("\"keyboardRange\": \"Today\"", json, StringComparison.Ordinal);

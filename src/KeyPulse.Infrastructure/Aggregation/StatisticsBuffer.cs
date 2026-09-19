@@ -15,6 +15,7 @@ internal sealed class StatisticsBuffer
     private readonly Dictionary<ClickPointKey, long> _clickPoints = new();
     private readonly Dictionary<PointerDensityKey, DensityDay> _pointerDensity = new();
     private readonly Dictionary<OccupancyTileKey, OccupancyTile> _occupancyTiles = new();
+    private readonly Dictionary<string, ActivitySession> _activitySessions = new(StringComparer.Ordinal);
 
     public DateTimeOffset? LastInputTime { get; private set; }
 
@@ -103,6 +104,30 @@ internal sealed class StatisticsBuffer
         App(date, app).ActiveSeconds += seconds;
     }
 
+    public void AddEffectiveActive(
+        ForegroundApp? app,
+        TimeSpan elapsed,
+        DateTimeOffset timestamp)
+    {
+        if (elapsed < TimeSpan.FromMilliseconds(500) || elapsed > TimeSpan.FromSeconds(5)) return;
+        var seconds = Math.Max(1, (long)Math.Round(elapsed.TotalSeconds));
+        var local = timestamp.ToLocalTime();
+        var date = DateOnly.FromDateTime(local.DateTime);
+        Hour(new HourBucket(date, local.Hour)).EffectiveActiveSeconds += seconds;
+        if (app is not null) App(date, app).EffectiveActiveSeconds += seconds;
+    }
+
+    public void UpsertActivitySession(ActivitySession session)
+    {
+        if (_activitySessions.TryGetValue(session.SessionId, out var existing) &&
+            existing.EndedAt > session.EndedAt)
+        {
+            return;
+        }
+
+        _activitySessions[session.SessionId] = session;
+    }
+
     public void Clear()
     {
         _keyCounts.Clear();
@@ -114,6 +139,7 @@ internal sealed class StatisticsBuffer
         _clickPoints.Clear();
         _pointerDensity.Clear();
         _occupancyTiles.Clear();
+        _activitySessions.Clear();
         LastInputTime = null;
     }
 
@@ -179,7 +205,8 @@ internal sealed class StatisticsBuffer
             CopyAppCounts(),
             CopyAppStats(),
             LastInputTime,
-            CopyPointerStatistics());
+            CopyPointerStatistics(),
+            _activitySessions.Values.ToArray());
     }
 
     public void Merge(StatisticsBatch batch)
@@ -223,6 +250,11 @@ internal sealed class StatisticsBuffer
         if (batch.Pointer is { } pointer)
         {
             MergePointer(pointer);
+        }
+
+        if (batch.ActivitySessions is { } sessions)
+        {
+            foreach (var session in sessions) UpsertActivitySession(session);
         }
 
         if (batch.LastInputTime is { } time &&
@@ -548,10 +580,11 @@ internal sealed class StatisticsBuffer
         public double MouseDistancePixels;
         public double CursorDistancePixels;
         public double EstimatedDistanceMeters;
+        public long EffectiveActiveSeconds;
 
         public HourlyActivity ToActivity() => new(
             KeyPressCount, MouseClickCount, WheelEventCount, MouseDistancePixels,
-            CursorDistancePixels, EstimatedDistanceMeters);
+            CursorDistancePixels, EstimatedDistanceMeters, EffectiveActiveSeconds);
 
         public void Add(in HourlyActivity activity)
         {
@@ -561,6 +594,7 @@ internal sealed class StatisticsBuffer
             MouseDistancePixels += activity.MouseDistancePixels;
             CursorDistancePixels += activity.CursorDistancePixels;
             EstimatedDistanceMeters += activity.EstimatedDistanceMeters;
+            EffectiveActiveSeconds += activity.EffectiveActiveSeconds;
         }
     }
 
@@ -575,13 +609,14 @@ internal sealed class StatisticsBuffer
         public double CursorDistancePixels;
         public double EstimatedDistanceMeters;
         public long ActiveSeconds;
+        public long EffectiveActiveSeconds;
 
         public long ActivityCount => KeyPressCount + MouseClickCount + WheelEventCount;
 
         public AppDayTotals ToTotals() => new(
             KeyPressCount, MouseClickCount, WheelEventCount,
             MouseDistancePixels, ActiveSeconds, DisplayName,
-            CursorDistancePixels, EstimatedDistanceMeters);
+            CursorDistancePixels, EstimatedDistanceMeters, EffectiveActiveSeconds);
 
         public void Add(in AppDayTotals totals)
         {
@@ -592,6 +627,7 @@ internal sealed class StatisticsBuffer
             CursorDistancePixels += totals.CursorDistancePixels;
             EstimatedDistanceMeters += totals.EstimatedDistanceMeters;
             ActiveSeconds += totals.ActiveSeconds;
+            EffectiveActiveSeconds += totals.EffectiveActiveSeconds;
             if (string.IsNullOrWhiteSpace(DisplayName) &&
                 !string.IsNullOrWhiteSpace(totals.DisplayName))
             {

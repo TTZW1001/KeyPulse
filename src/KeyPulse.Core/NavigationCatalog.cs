@@ -6,6 +6,7 @@ public enum AppPage
     Keyboard,
     Mouse,
     Trends,
+    Reports,
     Apps,
     Settings
 }
@@ -23,6 +24,7 @@ public static class NavigationCatalog
         new(AppPage.Keyboard, "键盘"),
         new(AppPage.Mouse, "鼠标"),
         new(AppPage.Trends, "趋势"),
+        new(AppPage.Reports, "报告"),
         new(AppPage.Apps, "应用"),
         new(AppPage.Settings, "设置")
     ];

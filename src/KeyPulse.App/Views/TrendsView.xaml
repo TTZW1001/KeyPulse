@@ -103,14 +103,32 @@
                                     Background="Transparent"
                                     AutomationProperties.AutomationId="TrendWheelChart"/>
 
-                <TextBlock Text="每小时活跃分布" Style="{StaticResource SectionTitleText}" Margin="0,16,0,0"/>
+                <Grid Margin="0,16,0,0">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="每小时活跃分布" Style="{StaticResource SectionTitleText}" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <RadioButton Content="输入活动" GroupName="HourlyMetric"
+                                     IsChecked="{Binding IsInputActivity, Mode=TwoWay}"/>
+                        <RadioButton Content="有效时长" GroupName="HourlyMetric" Margin="0"
+                                     IsChecked="{Binding IsEffectiveTime, Mode=TwoWay}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Row="1" Text="{Binding HourlyContextText}" Style="{StaticResource SecondaryText}"
+                               VerticalAlignment="Center" Margin="0,8,0,0"/>
+                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <RadioButton Content="日均" GroupName="HourlyDistribution"
+                                     IsChecked="{Binding IsDailyAverage, Mode=TwoWay}"/>
+                        <RadioButton Content="合计" GroupName="HourlyDistribution" Margin="0"
+                                     IsChecked="{Binding IsRangeTotal, Mode=TwoWay}"/>
+                    </StackPanel>
+                </Grid>
                 <Border Style="{StaticResource SectionDivider}"/>
                 <lvc:CartesianChart Height="168"
                                     Margin="0,0,0,8"
                                     Series="{Binding HourlySeries}"
                                     XAxes="{Binding HourlyXAxes}"
                                     YAxes="{Binding HourlyYAxes}"
-                                    LegendPosition="Hidden"
+                                    LegendPosition="Top"
                                     TooltipPosition="Top"
                                     ZoomMode="None"
                                     AnimationsSpeed="0:0:0"

@@ -83,7 +83,7 @@ public sealed class StatisticsExportService : IStatisticsExport
         written.Add(Write(
             directory,
             "keypulse-hourly-activity-" + stamp + ".csv",
-            "stat_date,stat_hour,key_press_count,mouse_click_count,wheel_event_count,legacy_raw_distance,active_seconds,cursor_distance_pixels,estimated_distance_meters",
+            "stat_date,stat_hour,key_press_count,mouse_click_count,wheel_event_count,legacy_raw_distance,effective_active_seconds,cursor_distance_pixels,estimated_distance_meters",
             connection,
             """
             SELECT stat_date, stat_hour, key_press_count, mouse_click_count,
@@ -102,13 +102,14 @@ public sealed class StatisticsExportService : IStatisticsExport
         written.Add(Write(
             directory,
             "keypulse-daily-app-stats-" + stamp + ".csv",
-            "stat_date,process_name,display_name,key_press_count,mouse_click_count,wheel_event_count,legacy_raw_distance,active_seconds,cursor_distance_pixels,estimated_distance_meters",
+            "stat_date,process_name,display_name,key_press_count,mouse_click_count,wheel_event_count,legacy_raw_distance,foreground_active_seconds,cursor_distance_pixels,estimated_distance_meters,effective_active_seconds",
             connection,
             """
             SELECT s.stat_date, a.process_name, a.display_name,
                    s.key_press_count, s.mouse_click_count, s.wheel_event_count,
                    s.mouse_distance_pixels, s.active_seconds,
-                   s.cursor_distance_pixels, s.estimated_distance_meters
+                   s.cursor_distance_pixels, s.estimated_distance_meters,
+                   s.effective_active_seconds
             FROM daily_app_stats s
             JOIN app_registry a ON a.app_id = s.app_id
             ORDER BY s.stat_date, a.process_name;
@@ -119,7 +120,23 @@ public sealed class StatisticsExportService : IStatisticsExport
                 reader.GetString(1),
                 reader.IsDBNull(2) ? "" : reader.GetString(2),
                 I64(reader, 3), I64(reader, 4), I64(reader, 5),
-                F64(reader, 6), I64(reader, 7), F64(reader, 8), F64(reader, 9)
+                F64(reader, 6), I64(reader, 7), F64(reader, 8), F64(reader, 9), I64(reader, 10)
+            ]));
+        written.Add(Write(
+            directory,
+            "keypulse-activity-sessions-" + stamp + ".csv",
+            "session_id,stat_date,started_at,ended_at,effective_seconds,key_press_count,mouse_click_count,wheel_event_count",
+            connection,
+            """
+            SELECT session_id, stat_date, started_at, ended_at, effective_seconds,
+                   key_press_count, mouse_click_count, wheel_event_count
+            FROM activity_sessions
+            ORDER BY started_at;
+            """,
+            reader =>
+            [
+                reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3),
+                I64(reader, 4), I64(reader, 5), I64(reader, 6), I64(reader, 7)
             ]));
         written.Add(Write(
             directory,

@@ -34,5 +34,27 @@ public interface IUserSettings
 
     DashboardTrendMetric DashboardTrendMetric { get => DashboardTrendMetric.Keys; set { } }
 
+    int AfkThresholdMinutes { get => 5; set { } }
+
+    HourlyDistributionMode HourlyDistributionMode { get => HourlyDistributionMode.DailyAverage; set { } }
+
+    HourlyMetric HourlyMetric { get => HourlyMetric.InputActivity; set { } }
+
+    bool AutoBackupEnabled { get => false; set { } }
+
+    BackupFrequency AutoBackupFrequency { get => BackupFrequency.Weekly; set { } }
+
+    string? AutoBackupDirectory { get => null; set { } }
+
+    int AutoBackupRetentionCount { get => 5; set { } }
+
+    DateTimeOffset? LastAutoBackupAt { get => null; set { } }
+
+    HeatmapPalette HeatmapPalette { get => HeatmapPalette.Ocean; set { } }
+
+    string? KeyboardSkinPath { get => null; set { } }
+
+    string? ScreenSkinPath { get => null; set { } }
+
     void Save();
 }

@@ -19,6 +19,8 @@ public sealed partial class TrendsViewModel : ObservableObject
 {
     private static readonly SKColor Accent = new(0x4E, 0x6E, 0x9E);
     private static readonly SKColor AccentFill = new(0x4E, 0x6E, 0x9E, 0xC8);
+    private static readonly SKColor ClickFill = new(0x70, 0x8D, 0x67, 0xD8);
+    private static readonly SKColor WheelFill = new(0xB0, 0x78, 0x55, 0xD8);
 
     private readonly ITrendQuery _query;
     private readonly IFlushService _flush;
@@ -49,6 +51,8 @@ public sealed partial class TrendsViewModel : ObservableObject
             .ToDateTime(TimeOnly.MinValue);
         _selectedRange = RangeOptions.First(option => option.Kind == settings.TrendRange);
         _isCustomRange = _selectedRange.Kind == TrendRangeKind.Custom;
+        _hourlyDistribution = settings.HourlyDistributionMode;
+        _hourlyMetric = settings.HourlyMetric;
         _flush.Flushed += Refresh;
         _theme.Changed += Refresh;
         ApplyEmptyCharts();
@@ -98,6 +102,34 @@ public sealed partial class TrendsViewModel : ObservableObject
     [ObservableProperty] private ISeries[] _hourlySeries = [];
     [ObservableProperty] private Axis[] _hourlyXAxes = [];
     [ObservableProperty] private Axis[] _hourlyYAxes = [];
+    [ObservableProperty] private string _hourlyContextText = "按有效统计日计算日均";
+
+    private HourlyDistributionMode _hourlyDistribution;
+    private HourlyMetric _hourlyMetric;
+
+    public bool IsDailyAverage
+    {
+        get => _hourlyDistribution == HourlyDistributionMode.DailyAverage;
+        set { if (value) SetHourlyDistribution(HourlyDistributionMode.DailyAverage); }
+    }
+
+    public bool IsRangeTotal
+    {
+        get => _hourlyDistribution == HourlyDistributionMode.RangeTotal;
+        set { if (value) SetHourlyDistribution(HourlyDistributionMode.RangeTotal); }
+    }
+
+    public bool IsInputActivity
+    {
+        get => _hourlyMetric == HourlyMetric.InputActivity;
+        set { if (value) SetHourlyMetric(HourlyMetric.InputActivity); }
+    }
+
+    public bool IsEffectiveTime
+    {
+        get => _hourlyMetric == HourlyMetric.EffectiveTime;
+        set { if (value) SetHourlyMetric(HourlyMetric.EffectiveTime); }
+    }
 
     public void SetActive(bool active)
     {
@@ -298,29 +330,93 @@ public sealed partial class TrendsViewModel : ObservableObject
         WheelXAxes = [CategoryAxis(axisLabels, text)];
         WheelYAxes = [ValueAxis(text, grid)];
 
-        var hourValues = new long[24];
+        var validDays = Math.Max(1, daily.Count(point =>
+            point.KeyPressCount + point.MouseClickCount + point.WheelEventCount > 0 ||
+            point.EffectiveActiveSeconds > 0));
+        var divisor = _hourlyDistribution == HourlyDistributionMode.DailyAverage && daily.Count > 1
+            ? validDays
+            : 1;
+        var hourKeys = new double[24];
+        var hourClicks = new double[24];
+        var hourWheels = new double[24];
+        var hourEffectiveMinutes = new double[24];
         var hourFull = new string[24];
-        var hourAxis = new string[24];
         for (var hour = 0; hour < 24; hour++)
         {
-            hourValues[hour] = hour < hourly.Count ? hourly[hour].ActivityCount : 0;
-            hourFull[hour] = hour.ToString("00", CultureInfo.InvariantCulture) + " 时";
-            hourAxis[hour] = hour % 3 == 0 ? hour.ToString("00", CultureInfo.InvariantCulture) : string.Empty;
+            var point = hour < hourly.Count ? hourly[hour] : new HourlyPoint(hour, 0);
+            hourKeys[hour] = point.KeyPressCount / (double)divisor;
+            hourClicks[hour] = point.MouseClickCount / (double)divisor;
+            hourWheels[hour] = point.WheelEventCount / (double)divisor;
+            hourEffectiveMinutes[hour] = point.EffectiveActiveSeconds / 60.0 / divisor;
+            hourFull[hour] = $"{hour:00}:00–{hour:00}:59";
         }
 
-        HourlySeries =
+        if (_hourlyMetric == HourlyMetric.EffectiveTime)
+        {
+            HourlySeries =
+            [
+                new ColumnSeries<double>
+                {
+                    Name = "有效时长（分钟）",
+                    Values = hourEffectiveMinutes,
+                    Fill = new SolidColorPaint(AccentFill),
+                    Stroke = null,
+                    MaxBarWidth = 16,
+                    YToolTipLabelFormatter = point =>
+                        point.Coordinate.PrimaryValue.ToString("0.#", CultureInfo.CurrentCulture) + " 分钟"
+                }
+            ];
+        }
+        else
+        {
+            HourlySeries =
+            [
+                new StackedColumnSeries<double>
+                {
+                    Name = "键盘",
+                    Values = hourKeys,
+                    Fill = new SolidColorPaint(AccentFill),
+                    Stroke = null,
+                    MaxBarWidth = 16,
+                    YToolTipLabelFormatter = FormatHourlyValue
+                },
+                new StackedColumnSeries<double>
+                {
+                    Name = "鼠标点击",
+                    Values = hourClicks,
+                    Fill = new SolidColorPaint(ClickFill),
+                    Stroke = null,
+                    MaxBarWidth = 16,
+                    YToolTipLabelFormatter = FormatHourlyValue
+                },
+                new StackedColumnSeries<double>
+                {
+                    Name = "滚轮",
+                    Values = hourWheels,
+                    Fill = new SolidColorPaint(WheelFill),
+                    Stroke = null,
+                    MaxBarWidth = 16,
+                    YToolTipLabelFormatter = FormatHourlyValue
+                }
+            ];
+        }
+        HourlyContextText = daily.Count > 1
+            ? (_hourlyDistribution == HourlyDistributionMode.DailyAverage
+                ? $"{validDays} 个有效统计日 · 日均"
+                : "所选范围合计")
+            : "所选日期实际值";
+        HourlyXAxes =
         [
-            new ColumnSeries<long>
+            new Axis
             {
-                Name = "活动",
-                Values = hourValues,
-                Fill = new SolidColorPaint(AccentFill),
-                Stroke = null,
-                MaxBarWidth = 16,
-                YToolTipLabelFormatter = point => FormatPoint(point, hourFull)
+                Labels = hourFull,
+                TextSize = 11,
+                MinStep = 3,
+                ForceStepToMin = true,
+                LabelsPaint = text,
+                SeparatorsPaint = new SolidColorPaint(SKColors.Transparent)
             }
         ];
-        HourlyXAxes = [CategoryAxis(hourAxis, text)];
         HourlyYAxes = [ValueAxis(text, grid)];
     }
 
@@ -400,6 +496,33 @@ public sealed partial class TrendsViewModel : ObservableObject
 
         var stamp = labels[index];
         return stamp + " · " + point.Coordinate.PrimaryValue.ToString("N0", CultureInfo.CurrentCulture);
+    }
+
+    private string FormatHourlyValue(ChartPoint point) =>
+        point.Coordinate.PrimaryValue.ToString(
+            _hourlyDistribution == HourlyDistributionMode.DailyAverage ? "N1" : "N0",
+            CultureInfo.CurrentCulture);
+
+    private void SetHourlyDistribution(HourlyDistributionMode value)
+    {
+        if (_hourlyDistribution == value) return;
+        _hourlyDistribution = value;
+        OnPropertyChanged(nameof(IsDailyAverage));
+        OnPropertyChanged(nameof(IsRangeTotal));
+        _settings.HourlyDistributionMode = value;
+        _settings.Save();
+        Refresh();
+    }
+
+    private void SetHourlyMetric(HourlyMetric value)
+    {
+        if (_hourlyMetric == value) return;
+        _hourlyMetric = value;
+        OnPropertyChanged(nameof(IsInputActivity));
+        OnPropertyChanged(nameof(IsEffectiveTime));
+        _settings.HourlyMetric = value;
+        _settings.Save();
+        Refresh();
     }
 }
 

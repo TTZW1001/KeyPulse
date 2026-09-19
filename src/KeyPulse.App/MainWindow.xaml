@@ -27,6 +27,9 @@
         <DataTemplate DataType="{x:Type vm:TrendsViewModel}">
             <views:TrendsView/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ReportViewModel}">
+            <views:ReportView/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:AppsViewModel}">
             <views:AppsView/>
         </DataTemplate>

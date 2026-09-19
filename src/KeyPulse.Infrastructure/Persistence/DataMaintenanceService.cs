@@ -14,7 +14,8 @@ public sealed record DataStatusSnapshot(
     DateOnly? LatestDate,
     DateTimeOffset? LastSuccessfulFlush,
     int PositionRetentionDays,
-    bool HasWriteError);
+    bool HasWriteError,
+    bool DatabaseIntegrityOk = true);
 
 public interface IDataMaintenanceService
 {
@@ -53,8 +54,9 @@ public sealed class DataMaintenanceService : IDataMaintenanceService
         var earliest = await _repository.GetEarliestStatDateAsync(cancellationToken);
         var latest = await GetLatestDateAsync(cancellationToken);
         var size = File.Exists(_paths.DatabasePath) ? new FileInfo(_paths.DatabasePath).Length : 0;
+        var healthy = QuickCheck();
         return new DataStatusSnapshot(_paths.DatabasePath, size, earliest, latest, lastFlush,
-            _settings.PositionRetentionDays, hasWriteError);
+            _settings.PositionRetentionDays, hasWriteError, healthy);
     }
 
     public async Task<string> CreateBackupAsync(
@@ -79,6 +81,7 @@ public sealed class DataMaintenanceService : IDataMaintenanceService
 
             CopyIfExists(_paths.SettingsPath, Path.Combine(temp, "config", "settings.json"));
             CopyIfExists(_paths.ExcludedAppsPath, Path.Combine(temp, "config", "excluded-apps.json"));
+            CopyDirectory(_paths.SkinsDirectory, Path.Combine(temp, "skins"));
             var files = Directory.GetFiles(temp, "*", SearchOption.AllDirectories)
                 .Select(path => new BackupFile(
                     Path.GetRelativePath(temp, path).Replace('\\', '/'),
@@ -130,6 +133,7 @@ public sealed class DataMaintenanceService : IDataMaintenanceService
             ReplaceFileAtomically(database, _paths.DatabasePath);
             CopyIfExists(Path.Combine(temp, "config", "settings.json"), _paths.SettingsPath);
             CopyIfExists(Path.Combine(temp, "config", "excluded-apps.json"), _paths.ExcludedAppsPath);
+            CopyDirectory(Path.Combine(temp, "skins"), _paths.SkinsDirectory);
         }
         finally
         {
@@ -145,6 +149,15 @@ public sealed class DataMaintenanceService : IDataMaintenanceService
         command.CommandText = "VACUUM;";
         command.ExecuteNonQuery();
         return Task.CompletedTask;
+    }
+
+    private bool QuickCheck()
+    {
+        if (!File.Exists(_paths.DatabasePath)) return true;
+        using var connection = _factory.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA quick_check;";
+        return string.Equals(Convert.ToString(command.ExecuteScalar()), "ok", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<DateOnly?> GetLatestDateAsync(CancellationToken cancellationToken)
@@ -190,6 +203,18 @@ public sealed class DataMaintenanceService : IDataMaintenanceService
         if (!File.Exists(source)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         File.Copy(source, destination, true);
+    }
+
+    private static void CopyDirectory(string source, string destination)
+    {
+        if (!Directory.Exists(source)) return;
+        foreach (var file in Directory.GetFiles(source, "*.png", SearchOption.TopDirectoryOnly))
+        {
+            var relative = Path.GetRelativePath(source, file);
+            var target = Path.Combine(destination, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target, true);
+        }
     }
 
     private static void ReplaceFileAtomically(string source, string destination)

@@ -119,6 +119,72 @@ public sealed class JsonUserSettings : IUserSettings
         set => _file.DashboardTrendMetric = value.ToString();
     }
 
+    public int AfkThresholdMinutes
+    {
+        get => Math.Clamp(_file.AfkThresholdMinutes ?? 5, 1, 60);
+        set => _file.AfkThresholdMinutes = Math.Clamp(value, 1, 60);
+    }
+
+    public HourlyDistributionMode HourlyDistributionMode
+    {
+        get => ParseEnum(_file.HourlyDistributionMode, KeyPulse.Core.HourlyDistributionMode.DailyAverage);
+        set => _file.HourlyDistributionMode = value.ToString();
+    }
+
+    public HourlyMetric HourlyMetric
+    {
+        get => ParseEnum(_file.HourlyMetric, KeyPulse.Core.HourlyMetric.InputActivity);
+        set => _file.HourlyMetric = value.ToString();
+    }
+
+    public bool AutoBackupEnabled
+    {
+        get => _file.AutoBackupEnabled;
+        set => _file.AutoBackupEnabled = value;
+    }
+
+    public BackupFrequency AutoBackupFrequency
+    {
+        get => ParseEnum(_file.AutoBackupFrequency, BackupFrequency.Weekly);
+        set => _file.AutoBackupFrequency = value.ToString();
+    }
+
+    public string? AutoBackupDirectory
+    {
+        get => string.IsNullOrWhiteSpace(_file.AutoBackupDirectory) ? null : _file.AutoBackupDirectory;
+        set => _file.AutoBackupDirectory = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    public int AutoBackupRetentionCount
+    {
+        get => Math.Clamp(_file.AutoBackupRetentionCount ?? 5, 1, 50);
+        set => _file.AutoBackupRetentionCount = Math.Clamp(value, 1, 50);
+    }
+
+    public DateTimeOffset? LastAutoBackupAt
+    {
+        get => _file.LastAutoBackupAt;
+        set => _file.LastAutoBackupAt = value;
+    }
+
+    public HeatmapPalette HeatmapPalette
+    {
+        get => ParseEnum(_file.HeatmapPalette, KeyPulse.Core.HeatmapPalette.Ocean);
+        set => _file.HeatmapPalette = value.ToString();
+    }
+
+    public string? KeyboardSkinPath
+    {
+        get => _file.KeyboardSkinPath;
+        set => _file.KeyboardSkinPath = value;
+    }
+
+    public string? ScreenSkinPath
+    {
+        get => _file.ScreenSkinPath;
+        set => _file.ScreenSkinPath = value;
+    }
+
     public void Save()
     {
         var directory = Path.GetDirectoryName(_path);
@@ -195,5 +261,27 @@ public sealed class JsonUserSettings : IUserSettings
         public string? TrendCustomToDate { get; set; }
 
         public string? DashboardTrendMetric { get; set; }
+
+        public int? AfkThresholdMinutes { get; set; }
+
+        public string? HourlyDistributionMode { get; set; }
+
+        public string? HourlyMetric { get; set; }
+
+        public bool AutoBackupEnabled { get; set; }
+
+        public string? AutoBackupFrequency { get; set; }
+
+        public string? AutoBackupDirectory { get; set; }
+
+        public int? AutoBackupRetentionCount { get; set; }
+
+        public DateTimeOffset? LastAutoBackupAt { get; set; }
+
+        public string? HeatmapPalette { get; set; }
+
+        public string? KeyboardSkinPath { get; set; }
+
+        public string? ScreenSkinPath { get; set; }
     }
 }

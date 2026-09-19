@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P24 — V1.2.1 interface consistency and preference persistence
+Current Phase: P25 — V1.3.0 activity insight, reports, and heatmap personalization
 
 ## Completed
 
@@ -29,10 +29,11 @@ Current Phase: P24 — V1.2.1 interface consistency and preference persistence
 - P22 V1.1.5 suppressed key-down hotkey recovery
 - P23 V1.2.0 local insights, data governance, and input accuracy
 - P24 V1.2.1 interface consistency and preference persistence
+- P25 V1.3.0 activity insight, reports, and heatmap personalization
 
 ## Last Verified Commit
 
-V1.2.1 release candidate — verified with 153 Release tests
+V1.3.0 release candidate — verified with 156 Release tests
 
 ## Known Issues
 
@@ -41,12 +42,12 @@ V1.2.1 release candidate — verified with 153 Release tests
 - Release artifacts are unsigned; SmartScreen may warn
 - WPF working set is still ~200 MB at idle; watch in P14
 - Microsoft Pinyin still not user-tested
-- Hourly `active_seconds` still 0; app-level `active_seconds` is a 1 s foreground sample estimate
-- AFK pause is not implemented; foreground duration remains a 1 s sample
+- Effective time begins with schema V003; older dates intentionally show no effective-time history
+- Foreground duration remains a separate 1 s sample estimate and is not used as effective time
 - Sleep/resume and logon autostart need user hand-tests
 - LiveCharts 2.0.5 pulls OpenTK / SkiaSharp.Views.WPF as netframework (NU1701 suppressed)
 - Fn itself may not be reported by Windows; recognizable media/function results are still counted as keys
 - Historical `VK_FF` rows are hidden rather than rewritten because their original keys cannot be recovered
 - A third-party global hook that suppresses both key-down and key-up remains impossible to observe
-- JSON export is not implemented; CSV export and consistent ZIP backup/restore are available
+- JSON export is not implemented; CSV export, PNG/HTML reports, and consistent ZIP backup/restore are available
 - Physical cursor distance remains a DPI-based estimate; exact screen-coordinate distance is shown in pixels

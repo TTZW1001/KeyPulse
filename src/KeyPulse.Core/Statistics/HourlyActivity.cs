@@ -6,4 +6,5 @@ public readonly record struct HourlyActivity(
     long WheelEventCount,
     double MouseDistancePixels,
     double CursorDistancePixels = 0,
-    double EstimatedDistanceMeters = 0);
+    double EstimatedDistanceMeters = 0,
+    long EffectiveActiveSeconds = 0);

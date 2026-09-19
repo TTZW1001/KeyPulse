@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Diagnostics;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
@@ -25,6 +27,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly InputDiagnostics _inputDiagnostics;
     private readonly IDataMaintenanceService _maintenance;
     private readonly Dispatcher _dispatcher;
+    private readonly IAppPaths _paths;
     private readonly object _gate = new();
     private bool _busy;
 
@@ -40,6 +43,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         IDataMaintenanceService maintenance)
     {
         _theme = theme;
+        _paths = paths;
         _startup = startup;
         _exclusions = exclusions;
         _flush = flush;
@@ -59,6 +63,12 @@ public sealed partial class SettingsViewModel : ObservableObject
         _inputDiagnostics.Changed += OnInputDiagnosticsChanged;
         ReloadExcluded();
         ReloadInputDiagnostics();
+        PaletteOptions =
+        [
+            new(HeatmapPalette.Ocean, "海蓝"), new(HeatmapPalette.Ember, "暖焰"),
+            new(HeatmapPalette.Forest, "森林"), new(HeatmapPalette.Violet, "紫藤")
+        ];
+        _selectedPalette = PaletteOptions.First(item => item.Value == settings.HeatmapPalette);
     }
 
     public string DataPath { get; }
@@ -73,9 +83,30 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public string PrivacyNotice { get; }
 
+    public string RepositoryUrl => "https://github.com/TTZW1001/KeyPulse";
+
     public ObservableCollection<ExcludedAppRow> ExcludedApps { get; } = [];
 
     public ObservableCollection<string> InputDiagnosticRows { get; } = [];
+
+    public IReadOnlyList<HeatmapPaletteOption> PaletteOptions { get; }
+
+    public HeatmapPaletteOption SelectedPalette
+    {
+        get => _selectedPalette;
+        set
+        {
+            if (value is null || Equals(value, _selectedPalette)) return;
+            _selectedPalette = value;
+            _settings.HeatmapPalette = value.Value;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+    private HeatmapPaletteOption _selectedPalette;
+
+    public string KeyboardSkinText => File.Exists(_settings.KeyboardSkinPath) ? "已启用自定义图片" : "未使用图片";
+    public string ScreenSkinText => File.Exists(_settings.ScreenSkinPath) ? "已启用自定义图片" : "未使用图片";
 
     [ObservableProperty]
     private string _newProcessName = string.Empty;
@@ -163,6 +194,58 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public int AfkThresholdMinutes
+    {
+        get => _settings.AfkThresholdMinutes;
+        set
+        {
+            var normalized = Math.Clamp(value, 1, 60);
+            if (_settings.AfkThresholdMinutes == normalized) return;
+            _settings.AfkThresholdMinutes = normalized;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    public bool AutoBackupEnabled
+    {
+        get => _settings.AutoBackupEnabled;
+        set
+        {
+            if (_settings.AutoBackupEnabled == value) return;
+            _settings.AutoBackupEnabled = value;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsBackupDaily
+    {
+        get => _settings.AutoBackupFrequency == BackupFrequency.Daily;
+        set { if (value) SetBackupFrequency(BackupFrequency.Daily); }
+    }
+
+    public bool IsBackupWeekly
+    {
+        get => _settings.AutoBackupFrequency == BackupFrequency.Weekly;
+        set { if (value) SetBackupFrequency(BackupFrequency.Weekly); }
+    }
+
+    public string AutoBackupDirectory => _settings.AutoBackupDirectory ?? _paths.BackupsDirectory;
+
+    public int AutoBackupRetentionCount
+    {
+        get => _settings.AutoBackupRetentionCount;
+        set
+        {
+            var normalized = Math.Clamp(value, 1, 50);
+            if (_settings.AutoBackupRetentionCount == normalized) return;
+            _settings.AutoBackupRetentionCount = normalized;
+            _settings.Save();
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsRetention30Days
     {
         get => _settings.PositionRetentionDays == 30;
@@ -231,6 +314,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
         OnPropertyChanged(nameof(InputDiagnosticsEnabled));
         OnPropertyChanged(nameof(ShowInsights));
+        OnPropertyChanged(nameof(AfkThresholdMinutes));
+        OnPropertyChanged(nameof(AutoBackupEnabled));
+        OnPropertyChanged(nameof(IsBackupDaily));
+        OnPropertyChanged(nameof(IsBackupWeekly));
+        OnPropertyChanged(nameof(AutoBackupDirectory));
+        OnPropertyChanged(nameof(AutoBackupRetentionCount));
+        OnPropertyChanged(nameof(SelectedPalette));
+        OnPropertyChanged(nameof(KeyboardSkinText));
+        OnPropertyChanged(nameof(ScreenSkinText));
         ReloadExcluded();
         ReloadInputDiagnostics();
         _ = RefreshDataStatusAsync();
@@ -418,6 +510,48 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void BrowseAutoBackupDirectory()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "选择自动备份目录",
+            InitialDirectory = AutoBackupDirectory
+        };
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FolderName)) return;
+        _settings.AutoBackupDirectory = dialog.FolderName;
+        _settings.Save();
+        OnPropertyChanged(nameof(AutoBackupDirectory));
+    }
+
+    [RelayCommand]
+    private void OpenRepository()
+    {
+        Process.Start(new ProcessStartInfo(RepositoryUrl) { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private void ImportKeyboardSkin() => ImportSkin(true);
+
+    [RelayCommand]
+    private void ImportScreenSkin() => ImportSkin(false);
+
+    [RelayCommand]
+    private void ClearKeyboardSkin()
+    {
+        _settings.KeyboardSkinPath = null;
+        _settings.Save();
+        OnPropertyChanged(nameof(KeyboardSkinText));
+    }
+
+    [RelayCommand]
+    private void ClearScreenSkin()
+    {
+        _settings.ScreenSkinPath = null;
+        _settings.Save();
+        OnPropertyChanged(nameof(ScreenSkinText));
+    }
+
+    [RelayCommand]
     private async Task RestoreAsync()
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
@@ -527,7 +661,9 @@ public sealed partial class SettingsViewModel : ObservableObject
                 DateRangeText = status.EarliestDate is null ? "暂无统计数据" :
                     $"{status.EarliestDate:yyyy-MM-dd} ～ {status.LatestDate:yyyy-MM-dd}";
                 LastFlushText = status.LastSuccessfulFlush?.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") ?? "本次启动尚未写入";
-                WriteHealthText = status.HasWriteError ? "写入异常，正在重试" : "正常";
+                WriteHealthText = status.HasWriteError
+                    ? "写入异常，正在重试"
+                    : status.DatabaseIntegrityOk ? "正常 · 完整性检查通过" : "数据库完整性检查异常";
             });
         }
         catch (Exception ex)
@@ -555,6 +691,59 @@ public sealed partial class SettingsViewModel : ObservableObject
             _busy = true;
             return true;
         }
+    }
+
+    private void SetBackupFrequency(BackupFrequency frequency)
+    {
+        if (_settings.AutoBackupFrequency == frequency) return;
+        _settings.AutoBackupFrequency = frequency;
+        _settings.Save();
+        OnPropertyChanged(nameof(IsBackupDaily));
+        OnPropertyChanged(nameof(IsBackupWeekly));
+    }
+
+    private void ImportSkin(bool keyboard)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = keyboard ? "选择键盘热力图皮肤" : "选择屏幕覆盖皮肤",
+            Filter = "图片|*.png;*.jpg;*.jpeg;*.bmp;*.webp"
+        };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            Directory.CreateDirectory(_paths.SkinsDirectory);
+            var destination = Path.Combine(_paths.SkinsDirectory, keyboard ? "keyboard-skin.png" : "screen-skin.png");
+            SaveNormalizedImage(dialog.FileName, destination);
+            if (keyboard) _settings.KeyboardSkinPath = destination;
+            else _settings.ScreenSkinPath = destination;
+            _settings.Save();
+            OnPropertyChanged(keyboard ? nameof(KeyboardSkinText) : nameof(ScreenSkinText));
+        }
+        catch (Exception ex)
+        {
+            WpfMessageBox.Show("图片导入失败：" + ex.Message, ProductInfo.Name,
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    private static void SaveNormalizedImage(string source, string destination)
+    {
+        using var stream = File.OpenRead(source);
+        var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        const int maxDimension = 2048;
+        BitmapSource output = frame;
+        var largest = Math.Max(frame.PixelWidth, frame.PixelHeight);
+        if (largest > maxDimension)
+        {
+            var scale = maxDimension / (double)largest;
+            output = new TransformedBitmap(frame, new System.Windows.Media.ScaleTransform(scale, scale));
+        }
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(output));
+        using var target = File.Create(destination);
+        encoder.Save(target);
     }
 
     private void End()
@@ -589,3 +778,5 @@ public sealed class ExcludedAppRow
 
     public string StatusText => IsDefault ? "默认" : "";
 }
+
+public sealed record HeatmapPaletteOption(HeatmapPalette Value, string Title);

@@ -36,6 +36,24 @@
                 </UniformGrid>
             </Border>
 
+            <Border Background="{DynamicResource ControlBackgroundBrush}"
+                    BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
+                    CornerRadius="8" Padding="16" Margin="0,0,0,20">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="今日有效使用" Style="{StaticResource SecondaryText}"/>
+                        <TextBlock Text="{Binding EffectiveTimeText}" Style="{StaticResource MetricValue}" FontSize="24"/>
+                        <TextBlock Text="{Binding EffectiveTimeHint}" Style="{StaticResource SecondaryText}" FontSize="11"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="活动会话" Style="{StaticResource SecondaryText}"/>
+                        <TextBlock Text="{Binding SessionCountText}" Style="{StaticResource MetricValue}" FontSize="24"/>
+                        <TextBlock Text="连续 15 分钟无输入后分为新会话" Style="{StaticResource SecondaryText}" FontSize="11"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <DockPanel Margin="0,0,0,20">
                 <TextBlock DockPanel.Dock="Left"
                            Text="最常用按键"

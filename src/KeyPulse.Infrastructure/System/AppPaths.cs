@@ -20,6 +20,8 @@ public sealed class AppPaths : IAppPaths
         ConfigDirectory = Path.Combine(RootDirectory, "config");
         SettingsPath = Path.Combine(ConfigDirectory, "settings.json");
         ExcludedAppsPath = Path.Combine(ConfigDirectory, "excluded-apps.json");
+        BackupsDirectory = Path.Combine(RootDirectory, "backups");
+        SkinsDirectory = Path.Combine(RootDirectory, "skins");
     }
 
     public string RootDirectory { get; }
@@ -29,4 +31,6 @@ public sealed class AppPaths : IAppPaths
     public string ConfigDirectory { get; }
     public string SettingsPath { get; }
     public string ExcludedAppsPath { get; }
+    public string BackupsDirectory { get; }
+    public string SkinsDirectory { get; }
 }

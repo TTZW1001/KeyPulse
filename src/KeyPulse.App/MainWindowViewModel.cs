@@ -17,12 +17,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly KeyboardViewModel _keyboard;
     private readonly MouseViewModel _mouse;
     private readonly TrendsViewModel _trends;
+    private readonly ReportViewModel _reports;
     private readonly AppsViewModel _apps;
     private readonly SettingsViewModel _settings;
     private readonly object _dashboardPage;
     private readonly object _keyboardPage;
     private readonly object _mousePage;
     private readonly object _trendsPage;
+    private readonly object _reportsPage;
     private readonly object _appsPage;
     private readonly object _settingsPage;
     private bool _windowVisible;
@@ -35,6 +37,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         KeyboardViewModel keyboard,
         MouseViewModel mouse,
         TrendsViewModel trends,
+        ReportViewModel reports,
         AppsViewModel apps,
         SettingsViewModel settings)
     {
@@ -45,12 +48,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _keyboard = keyboard;
         _mouse = mouse;
         _trends = trends;
+        _reports = reports;
         _apps = apps;
         _settings = settings;
         _dashboardPage = dashboard;
         _keyboardPage = keyboard;
         _mousePage = mouse;
         _trendsPage = trends;
+        _reportsPage = reports;
         _appsPage = apps;
         _settingsPage = settings;
         _dashboard.TrendDetailRequested += date =>
@@ -176,6 +181,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             AppPage.Keyboard => _keyboardPage,
             AppPage.Mouse => _mousePage,
             AppPage.Trends => _trendsPage,
+            AppPage.Reports => _reportsPage,
             AppPage.Apps => _appsPage,
             AppPage.Settings => _settingsPage,
             _ => _dashboardPage
@@ -199,6 +205,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _trends.Refresh();
         }
 
+        if (value.Page == AppPage.Reports)
+        {
+            _reports.Refresh();
+        }
+
         if (value.Page == AppPage.Apps)
         {
             _apps.Refresh();
@@ -217,6 +228,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _keyboard.SetActive(_windowVisible && SelectedItem.Page == AppPage.Keyboard);
         _mouse.SetActive(_windowVisible && SelectedItem.Page == AppPage.Mouse);
         _trends.SetActive(_windowVisible && SelectedItem.Page == AppPage.Trends);
+        _reports.SetActive(_windowVisible && SelectedItem.Page == AppPage.Reports);
         _apps.SetActive(_windowVisible && SelectedItem.Page == AppPage.Apps);
     }
 }

@@ -9,4 +9,6 @@ public interface IAppPaths
     string ConfigDirectory { get; }
     string SettingsPath { get; }
     string ExcludedAppsPath { get; }
+    string BackupsDirectory { get; }
+    string SkinsDirectory { get; }
 }

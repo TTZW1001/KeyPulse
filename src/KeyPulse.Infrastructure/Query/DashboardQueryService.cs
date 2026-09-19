@@ -29,6 +29,12 @@ public sealed class DashboardQueryService : IDashboardQuery
             () => _repository.GetMouseStatsAsync(date, date, cancellationToken).GetAwaiter().GetResult(),
             cancellationToken).ConfigureAwait(false);
         var unflushed = _reader.CaptureUnflushed();
+        var persistedHours = await ReadAsync(
+            () => _repository.GetHourlyAsync(date, date, cancellationToken).GetAwaiter().GetResult(),
+            cancellationToken).ConfigureAwait(false);
+        var persistedSessions = await ReadAsync(
+            () => _repository.GetActivitySessionsAsync(date, date, cancellationToken).GetAwaiter().GetResult(),
+            cancellationToken).ConfigureAwait(false);
 
         var keys = new Dictionary<string, long>(StringComparer.Ordinal);
         foreach (var row in persistedKeys)
@@ -79,6 +85,15 @@ public sealed class DashboardQueryService : IDashboardQuery
             break;
         }
 
+        var effectiveSeconds = persistedHours.Sum(row => row.ActiveSeconds);
+        foreach (var pair in unflushed.HourlyCounts)
+            if (pair.Key.Date == date) effectiveSeconds += pair.Value.EffectiveActiveSeconds;
+        var sessions = persistedSessions.Select(item => item.SessionId).ToHashSet(StringComparer.Ordinal);
+        if (unflushed.ActivitySessions is { } liveSessions)
+            foreach (var session in liveSessions.Where(item => item.Date == date)) sessions.Add(session.SessionId);
+        var trackingStart = await _repository.GetMetaAsync("effective_tracking_started_at", cancellationToken).ConfigureAwait(false);
+        var hasEffectiveTime = DateOnly.TryParse(trackingStart, out var trackingDate) && date >= trackingDate;
+
         return new DashboardToday(
             date,
             keys.Values.Sum(),
@@ -88,7 +103,10 @@ public sealed class DashboardQueryService : IDashboardQuery
             topKey,
             topCount,
             _reader.State,
-            mouse.EstimatedDistanceMeters);
+            mouse.EstimatedDistanceMeters,
+            effectiveSeconds,
+            sessions.Count,
+            hasEffectiveTime);
     }
 
     public Task<IReadOnlyList<DailyTrendPoint>> GetLast7DaysAsync(CancellationToken cancellationToken = default) =>

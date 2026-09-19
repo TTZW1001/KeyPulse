@@ -40,6 +40,15 @@ public interface IStatisticsRepository
         DateOnly to,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ActivitySession>> GetActivitySessionsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<ActivitySession>>(Array.Empty<ActivitySession>());
+
+    Task<string?> GetMetaAsync(string key, CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
+
     Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default);
 
     Task ClearStatisticsAsync(CancellationToken cancellationToken = default);

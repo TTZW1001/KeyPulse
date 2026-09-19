@@ -9,7 +9,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\..\assets\keypulse.ico</ApplicationIcon>
     <Product>KeyPulse</Product>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <Nullable>enable</Nullable>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>

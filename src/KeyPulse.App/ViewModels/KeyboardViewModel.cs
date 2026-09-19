@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Windows.Threading;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
@@ -15,7 +17,6 @@ public sealed partial class KeyboardViewModel : ObservableObject
 {
     private const double Unit = 32;
     private const double Gap = 3;
-    private static readonly Media.Color Accent = Media.Color.FromRgb(0x4E, 0x6E, 0x9E);
     private static readonly Media.Color LightUnused = Media.Color.FromRgb(0xE6, 0xE6, 0xE2);
     private static readonly Media.Color DarkUnused = Media.Color.FromRgb(0x2C, 0x2C, 0x2C);
     private static readonly Media.SolidColorBrush LightLabel = NewBrush(Media.Color.FromRgb(0x20, 0x20, 0x20));
@@ -123,6 +124,12 @@ public sealed partial class KeyboardViewModel : ObservableObject
     [ObservableProperty]
     private string _dataStateText = "正在加载…";
 
+    [ObservableProperty]
+    private BitmapSource? _keyboardSkinImage;
+
+    [ObservableProperty]
+    private double _keyOpacity = 1;
+
     public bool IsTodayRange
     {
         get => _range == KeyboardRange.Today;
@@ -191,6 +198,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
             await Task.WhenAll(keysTask, shortcutsTask).ConfigureAwait(false);
             await _dispatcher.InvokeAsync(() =>
             {
+                LoadSkin();
                 ApplyCounts(keysTask.Result, shortcutsTask.Result);
                 _lastSuccessfulUpdate = DateTime.Now;
                 DataStateText = "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
@@ -244,6 +252,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
 
         var culture = CultureInfo.CurrentCulture;
         var unused = _theme.IsDarkEffective ? DarkUnused : LightUnused;
+        var accent = HeatmapPaletteService.Accent(_settings.HeatmapPalette);
         var dark = _theme.IsDarkEffective;
         foreach (var key in Keys)
         {
@@ -251,7 +260,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
             var t = HeatmapScale.Normalize(count, max);
             key.Count = count;
             key.HoverText = key.KeyCode + " · " + count.ToString("N0", culture) + " 次";
-            key.Fill = NewBrush(Lerp(unused, Accent, t));
+            key.Fill = NewBrush(Lerp(unused, accent, t));
             key.LabelBrush = dark || t >= 0.45 ? DarkLabel : LightLabel;
         }
 
@@ -259,7 +268,7 @@ public sealed partial class KeyboardViewModel : ObservableObject
         for (var i = 0; i < legend.Length; i++)
         {
             var t = i / (double)(legend.Length - 1);
-            legend[i] = NewBrush(Lerp(unused, Accent, t));
+            legend[i] = NewBrush(Lerp(unused, accent, t));
         }
 
         LegendFills = legend;
@@ -315,6 +324,26 @@ public sealed partial class KeyboardViewModel : ObservableObject
     private void OnFlushed() => Refresh();
 
     private void OnThemeChanged() => Refresh();
+
+    private void LoadSkin()
+    {
+        var path = _settings.KeyboardSkinPath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            KeyboardSkinImage = null;
+            KeyOpacity = 1;
+            return;
+        }
+        using var stream = File.OpenRead(path);
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.StreamSource = stream;
+        image.EndInit();
+        image.Freeze();
+        KeyboardSkinImage = image;
+        KeyOpacity = 0.78;
+    }
 
     private static Media.Color Lerp(Media.Color from, Media.Color to, double t)
     {

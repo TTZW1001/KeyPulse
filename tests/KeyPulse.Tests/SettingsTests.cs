@@ -125,7 +125,7 @@ public class SettingsTests : IDisposable
         var exportDir = Path.Combine(_root, "export");
         var export = new StatisticsExportService(_factory);
         var files = await export.ExportCsvAsync(exportDir);
-        Assert.Equal(6, files.Count);
+        Assert.Equal(7, files.Count);
 
         foreach (var file in files)
         {

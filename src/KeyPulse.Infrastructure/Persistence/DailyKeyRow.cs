@@ -35,4 +35,5 @@ public sealed record DailyAppRow(
     double MouseDistancePixels,
     long ActiveSeconds,
     double CursorDistancePixels = 0,
-    double EstimatedDistanceMeters = 0);
+    double EstimatedDistanceMeters = 0,
+    long EffectiveActiveSeconds = 0);

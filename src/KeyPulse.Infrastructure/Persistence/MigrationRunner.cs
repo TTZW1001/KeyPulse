@@ -5,7 +5,7 @@ namespace KeyPulse.Infrastructure.Persistence;
 
 public sealed class MigrationRunner
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     public void Apply(SqliteConnection connection)
     {
@@ -36,6 +36,20 @@ public sealed class MigrationRunner
             {
                 command.Transaction = transaction;
                 command.CommandText = LoadSql("V002_InteractionHeatmaps.sql");
+                command.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            version = 2;
+        }
+
+        if (version < 3)
+        {
+            using var transaction = connection.BeginTransaction();
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = LoadSql("V003_EffectiveActivity.sql");
                 command.ExecuteNonQuery();
             }
 

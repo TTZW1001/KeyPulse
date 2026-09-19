@@ -89,6 +89,15 @@ public sealed partial class DashboardViewModel : ObservableObject
     [ObservableProperty]
     private string _recordText = "暂无纪录";
 
+    [ObservableProperty]
+    private string _effectiveTimeText = "0 分钟";
+
+    [ObservableProperty]
+    private string _sessionCountText = "0 次";
+
+    [ObservableProperty]
+    private string _effectiveTimeHint = "有效时长从 1.3 起开始统计";
+
     public bool ShowInsights => _settings.ShowInsights;
 
     [ObservableProperty]
@@ -216,6 +225,11 @@ public sealed partial class DashboardViewModel : ObservableObject
         WheelCountText = today.WheelEventCount.ToString("N0", culture);
         DistanceText = FormatDistance(today.DistancePixels);
         DistanceEstimateText = FormatEstimatedDistance(today.EstimatedDistanceMeters);
+        EffectiveTimeText = FormatDuration(today.EffectiveActiveSeconds);
+        SessionCountText = today.ActivitySessionCount.ToString("N0", culture) + " 次";
+        EffectiveTimeHint = today.HasEffectiveTime
+            ? $"超过 {_settings.AfkThresholdMinutes} 分钟无输入后停止累计"
+            : "有效时长从 1.3 起开始统计，不回填旧数据";
         MostUsedText = today.TopKey is null || today.TopKeyCount <= 0
             ? "暂无"
             : today.TopKey + " · " + today.TopKeyCount.ToString("N0", culture);
@@ -392,6 +406,14 @@ public sealed partial class DashboardViewModel : ObservableObject
         return meters >= 1000
             ? "约 " + (meters / 1000).ToString("0.00", culture) + " km（估算）"
             : "约 " + meters.ToString(meters >= 10 ? "0" : "0.0", culture) + " m（估算）";
+    }
+
+    private static string FormatDuration(long seconds)
+    {
+        var span = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return span.TotalHours >= 1
+            ? $"{(int)span.TotalHours} 小时 {span.Minutes} 分钟"
+            : $"{span.Minutes} 分钟";
     }
 
     private long TrendValue(DailyTrendPoint point) => TrendMetric switch

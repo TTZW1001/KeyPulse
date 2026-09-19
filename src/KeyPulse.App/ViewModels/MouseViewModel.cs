@@ -371,7 +371,7 @@ public sealed partial class MouseViewModel : ObservableObject
         var unused = _theme.IsDarkEffective
             ? Media.Color.FromRgb(0x2C, 0x2C, 0x2C)
             : Media.Color.FromRgb(0xE6, 0xE6, 0xE2);
-        var accent = Media.Color.FromRgb(0x4E, 0x6E, 0x9E);
+        var accent = HeatmapPaletteService.Accent(_settings.HeatmapPalette);
         LeftHeatBrush = NewBrush(Lerp(unused, accent, HeatmapScale.Normalize(mouse.Left, maxButton)));
         RightHeatBrush = NewBrush(Lerp(unused, accent, HeatmapScale.Normalize(mouse.Right, maxButton)));
         MiddleHeatBrush = NewBrush(Lerp(unused, accent, HeatmapScale.Normalize(mouse.Middle, maxButton)));
@@ -430,12 +430,13 @@ public sealed partial class MouseViewModel : ObservableObject
     {
         if (_pointerResult is null) return;
         var monitor = SelectedMonitor?.Value;
+        var accent = HeatmapPaletteService.Accent(_settings.HeatmapPalette);
         ClickHeatmapImage = RenderHeatmap(
-            _pointerResult, HeatmapMode.Clicks, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale);
+            _pointerResult, HeatmapMode.Clicks, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale, accent);
         TrajectoryHeatmapImage = RenderHeatmap(
-            _pointerResult, HeatmapMode.Trajectory, monitor, null, UseRelativeIntensity, UseLogScale);
+            _pointerResult, HeatmapMode.Trajectory, monitor, null, UseRelativeIntensity, UseLogScale, accent);
         CoverageHeatmapImage = RenderHeatmap(
-            _pointerResult, HeatmapMode.Coverage, monitor, null, UseRelativeIntensity, UseLogScale);
+            _pointerResult, HeatmapMode.Coverage, monitor, null, UseRelativeIntensity, UseLogScale, accent, _settings.ScreenSkinPath);
         var clicks = _pointerResult.Clicks.Where(point =>
             (monitor is null || point.MonitorId == monitor) &&
             (SelectedButton?.Value is null || point.ButtonCode == SelectedButton.Value)).Sum(point => point.Count);
@@ -496,7 +497,7 @@ public sealed partial class MouseViewModel : ObservableObject
         }
     }
 
-    private static void SaveCombinedHeatmap(PointerHeatmapResult result, string path, string rangeTitle)
+    private void SaveCombinedHeatmap(PointerHeatmapResult result, string path, string rangeTitle)
     {
         const int width = 1800;
         const int height = 920;
@@ -525,7 +526,9 @@ public sealed partial class MouseViewModel : ObservableObject
                 DrawText(drawing, modes[i].Item1, 24, x, 210, Media.Brushes.Black, true);
                 drawing.DrawRectangle(Media.Brushes.WhiteSmoke, new Media.Pen(Media.Brushes.LightGray, 2),
                     new Rect(x, 255, panelWidth, 460));
-                var image = RenderHeatmap(result, modes[i].Item2);
+                var image = RenderHeatmap(result, modes[i].Item2,
+                    accent: HeatmapPaletteService.Accent(_settings.HeatmapPalette),
+                    skinPath: modes[i].Item2 == HeatmapMode.Coverage ? _settings.ScreenSkinPath : null);
                 var availableWidth = panelWidth - 20.0;
                 const double availableHeight = 420;
                 var imageScale = Math.Min(availableWidth / image.PixelWidth, availableHeight / image.PixelHeight);
@@ -657,7 +660,9 @@ public sealed partial class MouseViewModel : ObservableObject
         string? monitorFilter = null,
         string? buttonFilter = null,
         bool relativeIntensity = true,
-        bool useLogScale = false)
+        bool useLogScale = false,
+        Media.Color? accent = null,
+        string? skinPath = null)
     {
         const int maxDimension = 720;
         var scale = Math.Min(
@@ -665,7 +670,10 @@ public sealed partial class MouseViewModel : ObservableObject
             maxDimension / (double)Math.Max(1, result.Layout.VirtualHeight));
         var width = Math.Max(1, (int)Math.Round(result.Layout.VirtualWidth * scale));
         var height = Math.Max(1, (int)Math.Round(result.Layout.VirtualHeight * scale));
-        var pixels = new byte[width * height * 4];
+        var skinPixels = LoadSkinPixels(mode == HeatmapMode.Coverage ? skinPath : null, width, height);
+        var hasSkin = skinPixels is not null;
+        var pixels = skinPixels ?? new byte[width * height * 4];
+        var heatColor = accent ?? Media.Color.FromRgb(0x4E, 0x6E, 0x9E);
         foreach (var monitor in result.Layout.Monitors)
         {
             if (monitorFilter is not null && monitor.Id != monitorFilter) continue;
@@ -673,7 +681,8 @@ public sealed partial class MouseViewModel : ObservableObject
             var top = (monitor.Top - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
             var right = (monitor.Left + monitor.Width - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
             var bottom = (monitor.Top + monitor.Height - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
-            FillRect(pixels, width, height, left, top, right, bottom, 0xEC, 0xEC, 0xE9, 0xFF);
+            if (mode != HeatmapMode.Coverage || !hasSkin)
+                FillRect(pixels, width, height, left, top, right, bottom, 0xEC, 0xEC, 0xE9, 0xFF);
         }
 
         if (mode == HeatmapMode.Clicks)
@@ -690,7 +699,7 @@ public sealed partial class MouseViewModel : ObservableObject
                 if (monitor is null) continue;
                 var x = (monitor.Left + point.X - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
                 var y = (monitor.Top + point.Y - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
-                DrawDot(pixels, width, height, x, y, 7, ScaleIntensity(point.Count, max, useLogScale));
+                DrawDot(pixels, width, height, x, y, 7, ScaleIntensity(point.Count, max, useLogScale), heatColor);
             }
         }
         else
@@ -722,7 +731,8 @@ public sealed partial class MouseViewModel : ObservableObject
                     var x1 = (monitor.Left + (((gx + 1) * monitor.Width + grid.Width - 1) / grid.Width) - result.Layout.VirtualLeft) * width / result.Layout.VirtualWidth;
                     var y1 = (monitor.Top + (((gy + 1) * monitor.Height + grid.Height - 1) / grid.Height) - result.Layout.VirtualTop) * height / result.Layout.VirtualHeight;
                     FillHeatCell(pixels, width, height, x0, y0, Math.Max(x0 + 1, x1), Math.Max(y0 + 1, y1),
-                        mode == HeatmapMode.Trajectory ? ScaleIntensity(value, max, useLogScale) : value / max);
+                        mode == HeatmapMode.Trajectory ? ScaleIntensity(value, max, useLogScale) : value / max,
+                        heatColor, mode == HeatmapMode.Coverage && hasSkin);
                 }
             }
         }
@@ -743,34 +753,78 @@ public sealed partial class MouseViewModel : ObservableObject
         }
     }
 
-    private static void DrawDot(byte[] pixels, int width, int height, int centerX, int centerY, int radius, double intensity)
+    private static void DrawDot(byte[] pixels, int width, int height, int centerX, int centerY, int radius,
+        double intensity, Media.Color accent)
     {
         for (var y = centerY - radius; y <= centerY + radius; y++)
         for (var x = centerX - radius; x <= centerX + radius; x++)
         {
             var distance = Math.Sqrt(((x - centerX) * (x - centerX)) + ((y - centerY) * (y - centerY)));
-            if (distance <= radius) SetHeatPixel(pixels, width, height, x, y, intensity * (1 - distance / radius));
+            if (distance <= radius) SetHeatPixel(pixels, width, height, x, y,
+                intensity * (1 - distance / radius), accent);
         }
     }
 
-    private static void SetHeatPixel(byte[] pixels, int width, int height, int x, int y, double intensity)
+    private static void SetHeatPixel(byte[] pixels, int width, int height, int x, int y, double intensity,
+        Media.Color accent, bool reveal = false)
     {
         if (x < 0 || y < 0 || x >= width || y >= height) return;
         intensity = Math.Clamp(intensity, 0.08, 1);
         var index = ((y * width) + x) * 4;
-        pixels[index] = (byte)(pixels[index] * (1 - intensity) + 0x9E * intensity);
-        pixels[index + 1] = (byte)(pixels[index + 1] * (1 - intensity) + 0x6E * intensity);
-        pixels[index + 2] = (byte)(pixels[index + 2] * (1 - intensity) + 0x4E * intensity);
+        if (reveal)
+        {
+            const double baseDim = 0.22;
+            var factor = 1 + intensity * ((1 / baseDim) - 1);
+            pixels[index] = (byte)Math.Min(255, pixels[index] * factor);
+            pixels[index + 1] = (byte)Math.Min(255, pixels[index + 1] * factor);
+            pixels[index + 2] = (byte)Math.Min(255, pixels[index + 2] * factor);
+        }
+        else
+        {
+            pixels[index] = (byte)(pixels[index] * (1 - intensity) + accent.B * intensity);
+            pixels[index + 1] = (byte)(pixels[index + 1] * (1 - intensity) + accent.G * intensity);
+            pixels[index + 2] = (byte)(pixels[index + 2] * (1 - intensity) + accent.R * intensity);
+        }
         pixels[index + 3] = 0xFF;
     }
 
     private static void FillHeatCell(
-        byte[] pixels, int width, int height, int left, int top, int right, int bottom, double intensity)
+        byte[] pixels, int width, int height, int left, int top, int right, int bottom, double intensity,
+        Media.Color accent, bool reveal)
     {
         for (var y = Math.Max(0, top); y < Math.Min(height, bottom); y++)
         for (var x = Math.Max(0, left); x < Math.Min(width, right); x++)
         {
-            SetHeatPixel(pixels, width, height, x, y, intensity);
+            SetHeatPixel(pixels, width, height, x, y, intensity, accent, reveal);
+        }
+    }
+
+    private static byte[]? LoadSkinPixels(string? path, int width, int height)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+        try
+        {
+            using var stream = File.OpenRead(path);
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            BitmapSource source = decoder.Frames[0];
+            source = new TransformedBitmap(source, new Media.ScaleTransform(
+                width / (double)Math.Max(1, source.PixelWidth),
+                height / (double)Math.Max(1, source.PixelHeight)));
+            source = new FormatConvertedBitmap(source, Media.PixelFormats.Bgra32, null, 0);
+            var pixels = new byte[width * height * 4];
+            source.CopyPixels(pixels, width * 4, 0);
+            for (var i = 0; i < pixels.Length; i += 4)
+            {
+                pixels[i] = (byte)(pixels[i] * 0.22);
+                pixels[i + 1] = (byte)(pixels[i + 1] * 0.22);
+                pixels[i + 2] = (byte)(pixels[i + 2] * 0.22);
+                pixels[i + 3] = 0xFF;
+            }
+            return pixels;
+        }
+        catch
+        {
+            return null;
         }
     }
 

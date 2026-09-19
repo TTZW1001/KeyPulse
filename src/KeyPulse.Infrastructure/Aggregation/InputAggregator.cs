@@ -1,4 +1,5 @@
 using KeyPulse.Core.Events;
+using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure.Input;
@@ -14,8 +15,10 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
     private readonly IExcludedAppList? _exclusions;
     private readonly IUserSettings? _settings;
     private readonly InputDiagnostics? _inputDiagnostics;
+    private readonly IClock _clock;
     private readonly ShortcutTracker _shortcuts = new();
     private readonly MouseGestureTracker _mouseGestures = new();
+    private readonly ActivitySessionTracker _activitySessions = new();
     private readonly object _gate = new();
     private StatisticsBuffer _active = new();
     private StatisticsBuffer _flush = new();
@@ -32,7 +35,8 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
         IForegroundAppCache? foreground = null,
         IExcludedAppList? exclusions = null,
         IUserSettings? settings = null,
-        InputDiagnostics? inputDiagnostics = null)
+        InputDiagnostics? inputDiagnostics = null,
+        IClock? clock = null)
     {
         _capture = capture;
         _logger = logger;
@@ -40,6 +44,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
         _exclusions = exclusions;
         _settings = settings;
         _inputDiagnostics = inputDiagnostics;
+        _clock = clock ?? SystemClock.Instance;
         _capture.InputReceived += OnInputReceived;
         if (_foreground is not null)
         {
@@ -70,6 +75,9 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             _state = state;
             if (state != TrackingState.Running)
             {
+                var threshold = TimeSpan.FromMinutes(_settings?.AfkThresholdMinutes ?? 5);
+                var closed = _activitySessions.Close(_clock.Now, threshold);
+                if (closed is not null) _active.UpsertActivitySession(closed);
                 _shortcuts.Reset();
                 _mouseGestures.Reset();
                 _lastPointerPosition = null;
@@ -100,6 +108,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
                 return;
             }
 
+            var isMouseClick = false;
             if (inputEvent is KeyPressedEvent key)
             {
                 var shortcut = _shortcuts.Process(key);
@@ -127,6 +136,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
                 var click = _mouseGestures.Process(button);
                 if (click is not null)
                 {
+                    isMouseClick = true;
                     _active.Add((_settings?.ScreenPositionStatsEnabled ?? false)
                         ? click
                         : click with { Position = null }, CurrentAppOrNull());
@@ -138,6 +148,13 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             }
 
             _lastInputTime = inputEvent.Timestamp;
+            var sessionUpdates = _activitySessions.ObserveInput(
+                inputEvent.Timestamp,
+                TimeSpan.FromMinutes(_settings?.AfkThresholdMinutes ?? 5),
+                inputEvent is KeyPressedEvent { IsKeyDown: true },
+                isMouseClick,
+                inputEvent is MouseWheelEvent);
+            foreach (var session in sessionUpdates) _active.UpsertActivitySession(session);
         }
     }
 
@@ -180,6 +197,7 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
             _mouseGestures.Reset();
             _lastPointerPosition = null;
             _lastTrajectoryPosition = null;
+            _activitySessions.Reset();
         }
     }
 
@@ -242,11 +260,6 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
 
     private void OnForegroundSampled(ForegroundTick tick)
     {
-        if (tick.App is null)
-        {
-            return;
-        }
-
         lock (_gate)
         {
             if (_state != TrackingState.Running)
@@ -254,12 +267,14 @@ public sealed class InputAggregator : IStatisticsAggregator, IStatisticsReader, 
                 return;
             }
 
-            if (IsExcluded(tick.App.ProcessName))
-            {
-                return;
-            }
-
-            _active.AddActive(tick.App, tick.Elapsed, tick.Timestamp);
+            var app = tick.App is not null && !IsExcluded(tick.App.ProcessName) ? tick.App : null;
+            if (app is not null) _active.AddActive(app, tick.Elapsed, tick.Timestamp);
+            var activity = _activitySessions.Advance(
+                tick.Timestamp,
+                tick.Elapsed,
+                TimeSpan.FromMinutes(_settings?.AfkThresholdMinutes ?? 5));
+            if (activity.IsActive) _active.AddEffectiveActive(app, tick.Elapsed, tick.Timestamp);
+            if (activity.Session is not null) _active.UpsertActivitySession(activity.Session);
         }
     }
 

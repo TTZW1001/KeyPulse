@@ -279,12 +279,16 @@ public sealed class V11FeatureTests
             new DatabaseInitializer(factory, new MigrationRunner()).Initialize();
             using (var upgraded = factory.Open())
             {
-                Assert.Equal(2L, ScalarLong(upgraded, "SELECT version FROM schema_version WHERE id=1;"));
+                Assert.Equal(3L, ScalarLong(upgraded, "SELECT version FROM schema_version WHERE id=1;"));
                 Assert.Equal(7L, ScalarLong(upgraded, "SELECT press_count FROM daily_key_stats WHERE key_code='A';"));
                 Assert.Equal(1L, ScalarLong(upgraded,
                     "SELECT COUNT(*) FROM pragma_table_info('daily_mouse_stats') WHERE name='cursor_distance_pixels';"));
                 Assert.Equal(1L, ScalarLong(upgraded,
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='hourly_click_points';"));
+                Assert.Equal(1L, ScalarLong(upgraded,
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='activity_sessions';"));
+                Assert.Equal(1L, ScalarLong(upgraded,
+                    "SELECT COUNT(*) FROM pragma_table_info('daily_app_stats') WHERE name='effective_active_seconds';"));
             }
         }
         finally

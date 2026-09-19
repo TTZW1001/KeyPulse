@@ -8,7 +8,8 @@ public sealed record StatisticsBatch(
     IReadOnlyDictionary<string, long> AppCounts,
     IReadOnlyDictionary<DateOnly, IReadOnlyDictionary<string, AppDayTotals>> AppStatsByDate,
     DateTimeOffset? LastInputTime,
-    PointerStatistics? Pointer = null)
+    PointerStatistics? Pointer = null,
+    IReadOnlyList<ActivitySession>? ActivitySessions = null)
 {
     public StatisticsBatch(
         IReadOnlyDictionary<DateOnly, IReadOnlyDictionary<string, long>> keyCountsByDate,
@@ -34,5 +35,6 @@ public sealed record StatisticsBatch(
         MouseByDate.Count == 0 &&
         HourlyCounts.Count == 0 &&
         AppStatsByDate.Count == 0 &&
+        (ActivitySessions is null || ActivitySessions.Count == 0) &&
         (Pointer is null || Pointer.IsEmpty);
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Core.Statistics;
 using KeyPulse.Infrastructure.Persistence;
@@ -41,6 +42,15 @@ public sealed class TrendQueryService : ITrendQuery
         return earliest;
     }
 
+    public async Task<DateOnly?> GetEffectiveTrackingStartDateAsync(CancellationToken cancellationToken = default)
+    {
+        var value = await _repository.GetMetaAsync("effective_tracking_started_at", cancellationToken)
+            .ConfigureAwait(false);
+        return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+            ? DateOnly.FromDateTime(parsed.ToLocalTime().DateTime)
+            : null;
+    }
+
     public async Task<IReadOnlyList<DailyTrendPoint>> GetDailyAsync(
         DateOnly from,
         DateOnly to,
@@ -58,6 +68,10 @@ public sealed class TrendQueryService : ITrendQuery
         var persistedMouse = await Task.Run(
             () => _repository.GetMouseStatsAsync(from, to, cancellationToken).GetAwaiter().GetResult(),
             cancellationToken).ConfigureAwait(false);
+        var persistedHours = await Task.Run(
+            () => _repository.GetHourlyAsync(from, to, cancellationToken).GetAwaiter().GetResult(),
+            cancellationToken).ConfigureAwait(false);
+        var effectiveStart = await GetEffectiveTrackingStartDateAsync(cancellationToken).ConfigureAwait(false);
         var unflushed = _reader.CaptureUnflushed();
 
         var days = to.DayNumber - from.DayNumber + 1;
@@ -82,7 +96,13 @@ public sealed class TrendQueryService : ITrendQuery
                 mouse = mouse.Add(snapMouse);
             }
 
-            points[i] = new DailyTrendPoint(date, keys, Clicks(mouse), Wheel(mouse));
+            var effectiveSeconds = persistedHours.Where(row => row.Date == date).Sum(row => row.ActiveSeconds);
+            effectiveSeconds += unflushed.HourlyCounts
+                .Where(pair => pair.Key.Date == date)
+                .Sum(pair => pair.Value.EffectiveActiveSeconds);
+            points[i] = new DailyTrendPoint(
+                date, keys, Clicks(mouse), Wheel(mouse), effectiveSeconds,
+                effectiveStart is not null && date >= effectiveStart.Value);
         }
 
         return points;
@@ -104,7 +124,11 @@ public sealed class TrendQueryService : ITrendQuery
             cancellationToken).ConfigureAwait(false);
         var unflushed = _reader.CaptureUnflushed();
 
-        var hours = new long[24];
+        var keys = new long[24];
+        var clicks = new long[24];
+        var wheels = new long[24];
+        var effective = new long[24];
+        var effectiveStart = await GetEffectiveTrackingStartDateAsync(cancellationToken).ConfigureAwait(false);
         foreach (var row in persisted)
         {
             if (row.Date < from || row.Date > to || row.Hour is < 0 or > 23)
@@ -112,7 +136,10 @@ public sealed class TrendQueryService : ITrendQuery
                 continue;
             }
 
-            hours[row.Hour] += row.KeyPressCount + row.MouseClickCount + row.WheelEventCount;
+            keys[row.Hour] += row.KeyPressCount;
+            clicks[row.Hour] += row.MouseClickCount;
+            wheels[row.Hour] += row.WheelEventCount;
+            effective[row.Hour] += row.ActiveSeconds;
         }
 
         foreach (var pair in unflushed.HourlyCounts)
@@ -122,14 +149,18 @@ public sealed class TrendQueryService : ITrendQuery
                 continue;
             }
 
-            hours[pair.Key.Hour] +=
-                pair.Value.KeyPressCount + pair.Value.MouseClickCount + pair.Value.WheelEventCount;
+            keys[pair.Key.Hour] += pair.Value.KeyPressCount;
+            clicks[pair.Key.Hour] += pair.Value.MouseClickCount;
+            wheels[pair.Key.Hour] += pair.Value.WheelEventCount;
+            effective[pair.Key.Hour] += pair.Value.EffectiveActiveSeconds;
         }
 
         var points = new HourlyPoint[24];
         for (var hour = 0; hour < 24; hour++)
         {
-            points[hour] = new HourlyPoint(hour, hours[hour]);
+            points[hour] = new HourlyPoint(
+                hour, keys[hour], clicks[hour], wheels[hour], effective[hour],
+                effectiveStart is not null && to >= effectiveStart.Value);
         }
 
         return points;

@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IMouseQuery, MouseQueryService>();
         services.AddSingleton<IPointerHeatmapQuery, PointerHeatmapQueryService>();
         services.AddSingleton<ITrendQuery, TrendQueryService>();
+        services.AddSingleton<IReportQuery, ReportQueryService>();
         services.AddSingleton<IAppQuery, AppQueryService>();
         services.AddSingleton<IStatisticsExport, StatisticsExportService>();
         services.AddSingleton<IDataMaintenanceService, DataMaintenanceService>();

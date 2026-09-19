@@ -6,6 +6,9 @@ public interface ITrendQuery
 {
     Task<DateOnly?> GetEarliestDateAsync(CancellationToken cancellationToken = default);
 
+    Task<DateOnly?> GetEffectiveTrackingStartDateAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<DateOnly?>(null);
+
     Task<IReadOnlyList<DailyTrendPoint>> GetDailyAsync(
         DateOnly from,
         DateOnly to,

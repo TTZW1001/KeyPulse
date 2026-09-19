@@ -9,19 +9,26 @@ public sealed record DashboardToday(
     string? TopKey,
     long TopKeyCount,
     TrackingState State,
-    double EstimatedDistanceMeters = 0);
+    double EstimatedDistanceMeters = 0,
+    long EffectiveActiveSeconds = 0,
+    int ActivitySessionCount = 0,
+    bool HasEffectiveTime = false);
 
 public sealed record DailyTrendPoint(
     DateOnly Date,
     long KeyPressCount,
     long MouseClickCount,
-    long WheelEventCount);
+    long WheelEventCount,
+    long EffectiveActiveSeconds = 0,
+    bool HasEffectiveTime = false);
 
 public sealed record HourlyPoint(
     int Hour,
     long KeyPressCount,
     long MouseClickCount,
-    long WheelEventCount)
+    long WheelEventCount,
+    long EffectiveActiveSeconds = 0,
+    bool HasEffectiveTime = false)
 {
     public HourlyPoint(int hour, long activityCount)
         : this(hour, activityCount, 0, 0)

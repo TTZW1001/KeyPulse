@@ -22,5 +22,8 @@
     <EmbeddedResource Include="Persistence\Migrations\V002_InteractionHeatmaps.sql">
       <LogicalName>KeyPulse.Infrastructure.Persistence.Migrations.V002_InteractionHeatmaps.sql</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Persistence\Migrations\V003_EffectiveActivity.sql">
+      <LogicalName>KeyPulse.Infrastructure.Persistence.Migrations.V003_EffectiveActivity.sql</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

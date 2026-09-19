@@ -119,7 +119,7 @@ public sealed class ReleaseRegressionTests : IDisposable
 
         Assert.Equal(2, rows.Length);
         Assert.Equal(
-            "2026-09-15,\"comma,app.exe\",\"Quoted \"\"App\"\", Suite\",1,2,3,4.5,6,0,0",
+            "2026-09-15,\"comma,app.exe\",\"Quoted \"\"App\"\", Suite\",1,2,3,4.5,6,0,0,0",
             rows[1]);
     }
 

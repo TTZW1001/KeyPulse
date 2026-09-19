@@ -43,6 +43,25 @@
                                  AutomationProperties.AutomationId="ThemeSystem"/>
                 </StackPanel>
             </DockPanel>
+            <DockPanel Margin="0,8,0,8">
+                <TextBlock DockPanel.Dock="Left" Text="热力图色系" Style="{StaticResource SettingRowLabel}" Width="92"/>
+                <ComboBox Width="150" ItemsSource="{Binding PaletteOptions}" SelectedItem="{Binding SelectedPalette}"
+                          DisplayMemberPath="Title" HorizontalAlignment="Left"/>
+            </DockPanel>
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                <TextBlock Text="键盘皮肤" Style="{StaticResource SettingRowLabel}"/>
+                <TextBlock Grid.Column="1" Text="{Binding KeyboardSkinText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
+                <Button Grid.Column="2" Content="导入图片" Command="{Binding ImportKeyboardSkinCommand}"/>
+                <Button Grid.Column="3" Content="恢复默认" Command="{Binding ClearKeyboardSkinCommand}" Margin="8,0,0,0"/>
+                <TextBlock Grid.Row="1" Text="屏幕皮肤" Style="{StaticResource SettingRowLabel}" Margin="0,8,0,0"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ScreenSkinText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,8,0,0"/>
+                <Button Grid.Row="1" Grid.Column="2" Content="导入图片" Command="{Binding ImportScreenSkinCommand}" Margin="0,8,0,0"/>
+                <Button Grid.Row="1" Grid.Column="3" Content="恢复默认" Command="{Binding ClearScreenSkinCommand}" Margin="8,8,0,0"/>
+            </Grid>
+            <TextBlock Text="导入后会复制并压缩到本机 KeyPulse 数据目录；键盘图片作为底图，屏幕图片仅用于累计覆盖的揭示效果。"
+                       Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
             <TextBlock Text="隐私与统计" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>
@@ -56,6 +75,15 @@
                       IsChecked="{Binding ShowInsights, Mode=TwoWay}"/>
             <TextBlock Text="只保存本机坐标统计，不截屏，不记录窗口名称或输入内容。"
                        Style="{StaticResource SecondaryText}" Margin="22,0,0,8" TextWrapping="Wrap"/>
+            <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                <TextBlock Text="无输入多久后视为离开" Style="{StaticResource SettingRowLabel}"
+                           VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBox Width="56" Text="{Binding AfkThresholdMinutes, UpdateSourceTrigger=LostFocus}"
+                         HorizontalContentAlignment="Right" AutomationProperties.Name="离开判定分钟数"/>
+                <TextBlock Text="分钟" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+            </DockPanel>
+            <TextBlock Text="默认 5 分钟，可设 1–60 分钟；阈值内的等待仍计入有效使用时长。连续 15 分钟无输入会开始新的活动会话。"
+                       Style="{StaticResource SecondaryText}" Margin="0,6,0,0" TextWrapping="Wrap"/>
             <TextBlock Text="输入诊断" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>
             <Border Style="{StaticResource SectionDivider}"/>
             <CheckBox Content="临时显示原始键盘事件"
@@ -158,7 +186,7 @@
             <TextBox Text="{Binding DataPath, Mode=OneWay}"
                      Style="{StaticResource ReadOnlyPathBox}"
                      AutomationProperties.AutomationId="DataPathText"/>
-            <TextBlock Text="约每 5 分钟写入磁盘；退出、休眠和导出前会立即保存。暂不支持按 AFK 自动暂停。"
+            <TextBlock Text="约每 5 分钟写入磁盘；退出、休眠和导出前会立即保存。有效使用时长会按上方 AFK 阈值停止累计。"
                        Style="{StaticResource SecondaryText}"
                        Margin="0,8,0,12"/>
 
@@ -188,6 +216,25 @@
             </WrapPanel>
             <TextBlock Text="只清理点击散点和轨迹密度历史；累计像素覆盖不会自动删除，可用“清除位置数据”重置。"
                        Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+
+            <CheckBox Content="自动备份" IsChecked="{Binding AutoBackupEnabled, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="AutoBackupEnabled"/>
+            <Grid Margin="22,4,0,14">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                <TextBlock Text="频率" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,16,8"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                    <RadioButton Content="每天" GroupName="AutoBackupFrequency" IsChecked="{Binding IsBackupDaily, Mode=TwoWay}"/>
+                    <RadioButton Content="每周" GroupName="AutoBackupFrequency" IsChecked="{Binding IsBackupWeekly, Mode=TwoWay}"/>
+                </StackPanel>
+                <TextBlock Grid.Row="1" Text="保留份数" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,16,8"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Width="56" HorizontalAlignment="Left"
+                         Text="{Binding AutoBackupRetentionCount, UpdateSourceTrigger=LostFocus}"/>
+                <TextBlock Grid.Row="2" Text="保存位置" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AutoBackupDirectory}" IsReadOnly="True"
+                         Style="{StaticResource ReadOnlyPathBox}" Margin="0,0,8,0"/>
+                <Button Grid.Row="2" Grid.Column="2" Content="更改" Command="{Binding BrowseAutoBackupDirectoryCommand}"/>
+            </Grid>
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Content="导出 CSV"
@@ -228,6 +275,18 @@
                        Style="{StaticResource SecondaryText}"
                        Margin="0,4,0,8"
                        AutomationProperties.AutomationId="AboutDataRoot"/>
+            <Button Command="{Binding OpenRepositoryCommand}"
+                    HorizontalAlignment="Left"
+                    ToolTip="打开 GitHub 仓库"
+                    AutomationProperties.Name="在 GitHub 查看 KeyPulse 仓库">
+                <StackPanel Orientation="Horizontal">
+                    <Viewbox Width="18" Height="18" Margin="0,0,8,0">
+                        <Path Fill="{DynamicResource PrimaryTextBrush}"
+                              Data="M12,0.5 C5.63,0.5 0.5,5.63 0.5,12 C0.5,17.1 3.79,21.41 8.35,22.94 C8.93,23.05 9.14,22.69 9.14,22.39 L9.14,20.23 C5.91,20.93 5.23,18.87 5.23,18.87 C4.7,17.52 3.94,17.16 3.94,17.16 C2.89,16.44 4.02,16.46 4.02,16.46 C5.18,16.54 5.8,17.66 5.8,17.66 C6.84,19.43 8.51,18.92 9.17,18.62 C9.27,17.87 9.57,17.36 9.9,17.07 C7.32,16.78 4.61,15.78 4.61,11.34 C4.61,10.07 5.06,9.04 5.8,8.23 C5.68,7.94 5.28,6.76 5.91,5.16 C5.91,5.16 6.88,4.85 9.08,6.35 C10,6.09 10.98,5.96 11.96,5.96 C12.94,5.96 13.92,6.09 14.84,6.35 C17.04,4.85 18.01,5.16 18.01,5.16 C18.64,6.76 18.24,7.94 18.12,8.23 C18.86,9.04 19.31,10.07 19.31,11.34 C19.31,15.79 16.59,16.77 14.01,17.06 C14.43,17.42 14.8,18.13 14.8,19.22 L14.8,22.39 C14.8,22.7 15.01,23.06 15.6,22.94 C20.16,21.41 23.45,17.1 23.45,12 C23.45,5.63 18.32,0.5 12,0.5 Z"/>
+                    </Viewbox>
+                    <TextBlock Text="在 GitHub 查看 · 欢迎点个 Star" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

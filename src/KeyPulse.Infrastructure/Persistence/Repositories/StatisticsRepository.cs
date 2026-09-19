@@ -74,6 +74,11 @@ public sealed class StatisticsRepository : IStatisticsRepository
                 }
             }
 
+            if (batch.ActivitySessions is { Count: > 0 })
+            {
+                foreach (var session in batch.ActivitySessions) UpsertActivitySession(connection, session);
+            }
+
             if (batch.Pointer is { IsEmpty: false } pointer)
             {
                 UpsertPointerStatistics(connection, pointer);
@@ -278,7 +283,8 @@ public sealed class StatisticsRepository : IStatisticsRepository
                    s.mouse_distance_pixels,
                    s.active_seconds,
                    s.cursor_distance_pixels,
-                   s.estimated_distance_meters
+                   s.estimated_distance_meters,
+                   s.effective_active_seconds
             FROM daily_app_stats s
             JOIN app_registry a ON a.app_id = s.app_id
             WHERE s.stat_date BETWEEN $from AND $to
@@ -301,10 +307,52 @@ public sealed class StatisticsRepository : IStatisticsRepository
                 reader.GetDouble(6),
                 reader.GetInt64(7),
                 reader.GetDouble(8),
-                reader.GetDouble(9)));
+                reader.GetDouble(9),
+                reader.GetInt64(10)));
         }
 
         return Task.FromResult<IReadOnlyList<DailyAppRow>>(rows);
+    }
+
+    public Task<IReadOnlyList<ActivitySession>> GetActivitySessionsAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT session_id, stat_date, started_at, ended_at, effective_seconds,
+                   key_press_count, mouse_click_count, wheel_event_count
+            FROM activity_sessions
+            WHERE stat_date BETWEEN $from AND $to
+            ORDER BY started_at;
+            """;
+        command.Parameters.AddWithValue("$from", Format(from));
+        command.Parameters.AddWithValue("$to", Format(to));
+        var rows = new List<ActivitySession>();
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            rows.Add(new ActivitySession(
+                reader.GetString(0), ParseDate(reader.GetString(1)),
+                DateTimeOffset.Parse(reader.GetString(2), CultureInfo.InvariantCulture),
+                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture),
+                reader.GetInt64(4), reader.GetInt64(5), reader.GetInt64(6), reader.GetInt64(7)));
+        }
+        return Task.FromResult<IReadOnlyList<ActivitySession>>(rows);
+    }
+
+    public Task<string?> GetMetaAsync(string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        using var connection = _factory.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT meta_value FROM settings_meta WHERE meta_key = $key;";
+        command.Parameters.AddWithValue("$key", key);
+        var value = command.ExecuteScalar();
+        return Task.FromResult(value is null or DBNull ? null : Convert.ToString(value, CultureInfo.InvariantCulture));
     }
 
     public Task<DateOnly?> GetEarliestStatDateAsync(CancellationToken cancellationToken = default)
@@ -359,6 +407,7 @@ public sealed class StatisticsRepository : IStatisticsRepository
             Execute(connection, "DELETE FROM pointer_occupancy_tiles;");
             Execute(connection, "DELETE FROM display_monitors;");
             Execute(connection, "DELETE FROM display_layouts;");
+            Execute(connection, "DELETE FROM activity_sessions;");
 
             using var commit = connection.CreateCommand();
             commit.CommandText = "COMMIT;";
@@ -387,7 +436,8 @@ public sealed class StatisticsRepository : IStatisticsRepository
         foreach (var table in new[]
                  {
                      "daily_key_stats", "daily_shortcut_stats", "daily_mouse_stats",
-                     "hourly_activity_stats", "daily_app_stats", "hourly_click_points", "daily_pointer_density"
+                     "hourly_activity_stats", "daily_app_stats", "hourly_click_points", "daily_pointer_density",
+                     "activity_sessions"
                  })
         {
             using var command = connection.CreateCommand();
@@ -566,7 +616,7 @@ public sealed class StatisticsRepository : IStatisticsRepository
                 stat_date, stat_hour,
                 key_press_count, mouse_click_count, wheel_event_count,
                 mouse_distance_pixels, active_seconds, cursor_distance_pixels, estimated_distance_meters)
-            VALUES ($date, $hour, $keys, $clicks, $wheels, $distance, 0, $cursorDistance, $meters)
+            VALUES ($date, $hour, $keys, $clicks, $wheels, $distance, $active, $cursorDistance, $meters)
             ON CONFLICT(stat_date, stat_hour) DO UPDATE SET
                 key_press_count = key_press_count + excluded.key_press_count,
                 mouse_click_count = mouse_click_count + excluded.mouse_click_count,
@@ -582,6 +632,7 @@ public sealed class StatisticsRepository : IStatisticsRepository
         command.Parameters.AddWithValue("$clicks", activity.MouseClickCount);
         command.Parameters.AddWithValue("$wheels", activity.WheelEventCount);
         command.Parameters.AddWithValue("$distance", activity.MouseDistancePixels);
+        command.Parameters.AddWithValue("$active", activity.EffectiveActiveSeconds);
         command.Parameters.AddWithValue("$cursorDistance", activity.CursorDistancePixels);
         command.Parameters.AddWithValue("$meters", activity.EstimatedDistanceMeters);
         command.ExecuteNonQuery();
@@ -654,8 +705,9 @@ public sealed class StatisticsRepository : IStatisticsRepository
             INSERT INTO daily_app_stats (
                 stat_date, app_id,
                 key_press_count, mouse_click_count, wheel_event_count,
-                mouse_distance_pixels, active_seconds, cursor_distance_pixels, estimated_distance_meters)
-            VALUES ($date, $app, $keys, $clicks, $wheels, $distance, $active, $cursorDistance, $meters)
+                mouse_distance_pixels, active_seconds, cursor_distance_pixels, estimated_distance_meters,
+                effective_active_seconds)
+            VALUES ($date, $app, $keys, $clicks, $wheels, $distance, $active, $cursorDistance, $meters, $effective)
             ON CONFLICT(stat_date, app_id) DO UPDATE SET
                 key_press_count = key_press_count + excluded.key_press_count,
                 mouse_click_count = mouse_click_count + excluded.mouse_click_count,
@@ -663,7 +715,8 @@ public sealed class StatisticsRepository : IStatisticsRepository
                 mouse_distance_pixels = mouse_distance_pixels + excluded.mouse_distance_pixels,
                 active_seconds = active_seconds + excluded.active_seconds,
                 cursor_distance_pixels = cursor_distance_pixels + excluded.cursor_distance_pixels,
-                estimated_distance_meters = estimated_distance_meters + excluded.estimated_distance_meters;
+                estimated_distance_meters = estimated_distance_meters + excluded.estimated_distance_meters,
+                effective_active_seconds = effective_active_seconds + excluded.effective_active_seconds;
             """;
         command.Parameters.AddWithValue("$date", Format(date));
         command.Parameters.AddWithValue("$app", appId);
@@ -674,6 +727,35 @@ public sealed class StatisticsRepository : IStatisticsRepository
         command.Parameters.AddWithValue("$active", totals.ActiveSeconds);
         command.Parameters.AddWithValue("$cursorDistance", totals.CursorDistancePixels);
         command.Parameters.AddWithValue("$meters", totals.EstimatedDistanceMeters);
+        command.Parameters.AddWithValue("$effective", totals.EffectiveActiveSeconds);
+        command.ExecuteNonQuery();
+    }
+
+    private static void UpsertActivitySession(SqliteConnection connection, ActivitySession session)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO activity_sessions (
+                session_id, stat_date, started_at, ended_at, effective_seconds,
+                key_press_count, mouse_click_count, wheel_event_count)
+            VALUES ($id, $date, $start, $end, $effective, $keys, $clicks, $wheels)
+            ON CONFLICT(session_id) DO UPDATE SET
+                stat_date = excluded.stat_date,
+                started_at = excluded.started_at,
+                ended_at = excluded.ended_at,
+                effective_seconds = MAX(activity_sessions.effective_seconds, excluded.effective_seconds),
+                key_press_count = MAX(activity_sessions.key_press_count, excluded.key_press_count),
+                mouse_click_count = MAX(activity_sessions.mouse_click_count, excluded.mouse_click_count),
+                wheel_event_count = MAX(activity_sessions.wheel_event_count, excluded.wheel_event_count);
+            """;
+        command.Parameters.AddWithValue("$id", session.SessionId);
+        command.Parameters.AddWithValue("$date", Format(session.Date));
+        command.Parameters.AddWithValue("$start", session.StartedAt.ToString("o"));
+        command.Parameters.AddWithValue("$end", session.EndedAt.ToString("o"));
+        command.Parameters.AddWithValue("$effective", session.EffectiveSeconds);
+        command.Parameters.AddWithValue("$keys", session.KeyPressCount);
+        command.Parameters.AddWithValue("$clicks", session.MouseClickCount);
+        command.Parameters.AddWithValue("$wheels", session.WheelEventCount);
         command.ExecuteNonQuery();
     }
 

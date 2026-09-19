@@ -56,6 +56,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton(_singleInstance);
                     services.AddKeyPulseInfrastructure();
                     services.AddHostedService(sp => sp.GetRequiredService<FlushService>());
+                    services.AddHostedService<AutoBackupService>();
                     services.AddSingleton<ApplicationLifecycleService>();
                     services.AddSingleton<IApplicationLifecycle>(sp => sp.GetRequiredService<ApplicationLifecycleService>());
                     services.AddSingleton<TrayService>();
@@ -65,6 +66,8 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<KeyboardViewModel>();
                     services.AddSingleton<MouseViewModel>();
                     services.AddSingleton<TrendsViewModel>();
+                    services.AddSingleton<ReportExportService>();
+                    services.AddSingleton<ReportViewModel>();
                     services.AddSingleton<AppsViewModel>();
                     services.AddSingleton<SettingsViewModel>();
                     services.AddSingleton<MainWindowViewModel>();
