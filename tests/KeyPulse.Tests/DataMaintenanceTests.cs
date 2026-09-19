@@ -54,6 +54,33 @@ public sealed class DataMaintenanceTests : IDisposable
     }
 
     [Fact]
+    public async Task BackupAndRestore_PreservesManagedScreenImageAndCropMetadata()
+    {
+        var paths = new AppPaths(_root);
+        var factory = new SqliteConnectionFactory(paths);
+        new DatabaseInitializer(factory, new MigrationRunner()).Initialize();
+        var repository = new StatisticsRepository(factory);
+        Directory.CreateDirectory(paths.SkinsDirectory);
+        var imagePath = Path.Combine(paths.SkinsDirectory, "screen-image-source.png");
+        await File.WriteAllBytesAsync(imagePath, [1, 2, 3, 4]);
+        var settings = new JsonUserSettings(paths)
+        {
+            ScreenImagePath = imagePath,
+            ScreenImageCrop = new ScreenImageCropSettings(0, 0, 1, 1, 1.5, "layout")
+        };
+        settings.Save();
+        var service = new DataMaintenanceService(paths, factory, repository, settings);
+
+        var archive = await service.CreateBackupAsync(Path.Combine(_root, "exports"));
+        File.Delete(imagePath);
+        await service.RestoreBackupAsync(archive);
+
+        Assert.Equal(new byte[] { 1, 2, 3, 4 }, await File.ReadAllBytesAsync(imagePath));
+        var restored = new JsonUserSettings(paths);
+        Assert.Equal("layout", restored.ScreenImageCrop?.LayoutSignature);
+    }
+
+    [Fact]
     public async Task RangeClear_RemovesOnlySelectedDates()
     {
         var paths = new AppPaths(_root);

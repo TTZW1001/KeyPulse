@@ -1,0 +1,59 @@
+<Window x:Class="KeyPulse.App.Views.ScreenImageCropWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="裁剪屏幕图片" Width="820" Height="650" MinWidth="640" MinHeight="520"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="NoResize"
+        Background="{DynamicResource ContentBackgroundBrush}">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,14">
+            <TextBlock Text="按最终屏幕热力图比例裁剪" Style="{StaticResource SectionTitleText}"/>
+            <TextBlock Text="拖动图片调整位置，使用滚轮或下方滑块缩放。边框表示各显示器在最终 PNG 中的位置。"
+                       Style="{StaticResource SecondaryText}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <Border x:Name="ViewportBorder" Grid.Row="1" ClipToBounds="True"
+                BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
+                Background="#202124" HorizontalAlignment="Center" VerticalAlignment="Center"
+                MouseLeftButtonDown="Viewport_MouseLeftButtonDown"
+                MouseLeftButtonUp="Viewport_MouseLeftButtonUp"
+                MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel">
+            <Canvas x:Name="ImageCanvas" ClipToBounds="True">
+                <Image x:Name="BlurredImage" Stretch="Fill" Opacity="0.58" IsHitTestVisible="False">
+                    <Image.Effect><BlurEffect Radius="10"/></Image.Effect>
+                </Image>
+                <Image x:Name="ClearImage" Stretch="Fill" IsHitTestVisible="False">
+                    <Image.OpacityMask>
+                        <RadialGradientBrush Center="0.5,0.48" GradientOrigin="0.5,0.48" RadiusX="0.38" RadiusY="0.38">
+                            <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                            <GradientStop Color="#BFFFFFFF" Offset="0.42"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Image.OpacityMask>
+                </Image>
+                <Canvas x:Name="MonitorOverlay" IsHitTestVisible="False"/>
+            </Canvas>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="缩放" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <Slider x:Name="ZoomSlider" Grid.Column="1" Minimum="1" Maximum="4" Value="1"
+                    SmallChange="0.05" LargeChange="0.25" ValueChanged="ZoomSlider_ValueChanged"
+                    AutomationProperties.Name="图片缩放"/>
+            <Button Grid.Column="2" Content="重置" Click="Reset_Click" Margin="12,0,0,0"/>
+        </Grid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="取消" Click="Cancel_Click" MinWidth="84"/>
+            <Button Content="确认裁剪" Click="Confirm_Click" MinWidth="104" Margin="10,0,0,0" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

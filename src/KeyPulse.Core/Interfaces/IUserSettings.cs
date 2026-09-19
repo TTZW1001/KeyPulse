@@ -52,9 +52,9 @@ public interface IUserSettings
 
     HeatmapPalette HeatmapPalette { get => HeatmapPalette.Ocean; set { } }
 
-    string? KeyboardSkinPath { get => null; set { } }
+    string? ScreenImagePath { get => null; set { } }
 
-    string? ScreenSkinPath { get => null; set { } }
+    ScreenImageCropSettings? ScreenImageCrop { get => null; set { } }
 
     void Save();
 }

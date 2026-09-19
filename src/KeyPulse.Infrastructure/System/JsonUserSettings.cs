@@ -11,6 +11,7 @@ public sealed class JsonUserSettings : IUserSettings
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Converters = { new JsonStringEnumConverter() }
     };
 
@@ -21,6 +22,11 @@ public sealed class JsonUserSettings : IUserSettings
     {
         _path = paths.SettingsPath;
         _file = Load(_path, File.Exists(_path));
+        if (string.IsNullOrWhiteSpace(_file.ScreenImagePath) && !string.IsNullOrWhiteSpace(_file.LegacyScreenSkinPath))
+        {
+            _file.ScreenImagePath = _file.LegacyScreenSkinPath;
+        }
+        _file.LegacyScreenSkinPath = null;
     }
 
     public bool HideToTrayHintDismissed
@@ -173,16 +179,16 @@ public sealed class JsonUserSettings : IUserSettings
         set => _file.HeatmapPalette = value.ToString();
     }
 
-    public string? KeyboardSkinPath
+    public string? ScreenImagePath
     {
-        get => _file.KeyboardSkinPath;
-        set => _file.KeyboardSkinPath = value;
+        get => _file.ScreenImagePath;
+        set => _file.ScreenImagePath = value;
     }
 
-    public string? ScreenSkinPath
+    public ScreenImageCropSettings? ScreenImageCrop
     {
-        get => _file.ScreenSkinPath;
-        set => _file.ScreenSkinPath = value;
+        get => _file.ScreenImageCrop;
+        set => _file.ScreenImageCrop = value;
     }
 
     public void Save()
@@ -280,8 +286,11 @@ public sealed class JsonUserSettings : IUserSettings
 
         public string? HeatmapPalette { get; set; }
 
-        public string? KeyboardSkinPath { get; set; }
+        public string? ScreenImagePath { get; set; }
 
-        public string? ScreenSkinPath { get; set; }
+        public ScreenImageCropSettings? ScreenImageCrop { get; set; }
+
+        [JsonPropertyName("screenSkinPath")]
+        public string? LegacyScreenSkinPath { get; set; }
     }
 }

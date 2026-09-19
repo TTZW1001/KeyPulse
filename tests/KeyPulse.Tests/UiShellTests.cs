@@ -153,6 +153,36 @@ public class UiShellTests
     }
 
     [Fact]
+    public void UserSettings_MigratesLegacyScreenSkin_AndDropsKeyboardSkin()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "KeyPulseTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var paths = new AppPaths(root);
+            Directory.CreateDirectory(paths.ConfigDirectory);
+            File.WriteAllText(paths.SettingsPath,
+                """{"keyboardSkinPath":"old-keyboard.png","screenSkinPath":"old-screen.png"}""");
+
+            var settings = new JsonUserSettings(paths);
+            Assert.Equal("old-screen.png", settings.ScreenImagePath);
+            Assert.Null(settings.ScreenImageCrop);
+            settings.ScreenImageCrop = new ScreenImageCropSettings(0.1, 0.2, 0.7, 0.6, 16d / 9, "layout");
+            settings.Save();
+
+            var json = File.ReadAllText(paths.SettingsPath);
+            Assert.DoesNotContain("keyboardSkinPath", json, StringComparison.Ordinal);
+            Assert.DoesNotContain("screenSkinPath", json, StringComparison.Ordinal);
+            Assert.Contains("screenImagePath", json, StringComparison.Ordinal);
+            var loaded = new JsonUserSettings(paths);
+            Assert.Equal("layout", loaded.ScreenImageCrop?.LayoutSignature);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public void UserSettings_InvalidNewPreferences_FallBackWithoutLosingExistingSettings()
     {
         var root = Path.Combine(Path.GetTempPath(), "KeyPulseTests", Guid.NewGuid().ToString("N"));

@@ -49,18 +49,16 @@
                           DisplayMemberPath="Title" HorizontalAlignment="Left"/>
             </DockPanel>
             <Grid Margin="0,6,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
-                <TextBlock Text="键盘皮肤" Style="{StaticResource SettingRowLabel}"/>
-                <TextBlock Grid.Column="1" Text="{Binding KeyboardSkinText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
-                <Button Grid.Column="2" Content="导入图片" Command="{Binding ImportKeyboardSkinCommand}"/>
-                <Button Grid.Column="3" Content="恢复默认" Command="{Binding ClearKeyboardSkinCommand}" Margin="8,0,0,0"/>
-                <TextBlock Grid.Row="1" Text="屏幕皮肤" Style="{StaticResource SettingRowLabel}" Margin="0,8,0,0"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ScreenSkinText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" Margin="0,8,0,0"/>
-                <Button Grid.Row="1" Grid.Column="2" Content="导入图片" Command="{Binding ImportScreenSkinCommand}" Margin="0,8,0,0"/>
-                <Button Grid.Row="1" Grid.Column="3" Content="恢复默认" Command="{Binding ClearScreenSkinCommand}" Margin="8,8,0,0"/>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="92"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock Text="屏幕图片" Style="{StaticResource SettingRowLabel}"/>
+                <TextBlock Grid.Column="1" Text="{Binding ScreenImageText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <Button Grid.Column="2" Content="导入/更换" Command="{Binding ImportScreenImageCommand}"/>
+                <Button Grid.Column="3" Content="重新裁剪" Command="{Binding RecropScreenImageCommand}" Margin="8,0,0,0"
+                        Visibility="{Binding HasScreenImage, Converter={StaticResource BoolToVis}}"/>
+                <Button Grid.Column="4" Content="移除" Command="{Binding ClearScreenImageCommand}" Margin="8,0,0,0"
+                        Visibility="{Binding HasScreenImage, Converter={StaticResource BoolToVis}}"/>
             </Grid>
-            <TextBlock Text="导入后会复制并压缩到本机 KeyPulse 数据目录；键盘图片作为底图，屏幕图片仅用于累计覆盖的揭示效果。"
+            <TextBlock Text="图片会复制到本机 KeyPulse 数据目录并按最终 PNG 比例裁剪；轨迹密度和点击热点越高，原图越清晰。不会截屏、上传图片或保存原图路径。"
                        Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
             <TextBlock Text="隐私与统计" Style="{StaticResource SectionTitleText}" Margin="0,28,0,0"/>

@@ -1,10 +1,10 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Diagnostics;
-using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
+using KeyPulse.App.Views;
 using KeyPulse.Core;
 using KeyPulse.Core.Interfaces;
 using KeyPulse.Infrastructure.Input;
@@ -28,6 +28,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IDataMaintenanceService _maintenance;
     private readonly Dispatcher _dispatcher;
     private readonly IAppPaths _paths;
+    private readonly ScreenImageService _screenImages;
+    private readonly DisplayLayoutProvider _displayLayout;
     private readonly object _gate = new();
     private bool _busy;
 
@@ -40,7 +42,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         IStatisticsExport export,
         IUserSettings settings,
         InputDiagnostics inputDiagnostics,
-        IDataMaintenanceService maintenance)
+        IDataMaintenanceService maintenance,
+        ScreenImageService screenImages,
+        DisplayLayoutProvider displayLayout)
     {
         _theme = theme;
         _paths = paths;
@@ -51,6 +55,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         _settings = settings;
         _inputDiagnostics = inputDiagnostics;
         _maintenance = maintenance;
+        _screenImages = screenImages;
+        _displayLayout = displayLayout;
         _dispatcher = Dispatcher.CurrentDispatcher;
         DataPath = paths.DataDirectory;
         DatabasePath = paths.DatabasePath;
@@ -105,8 +111,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     private HeatmapPaletteOption _selectedPalette;
 
-    public string KeyboardSkinText => File.Exists(_settings.KeyboardSkinPath) ? "已启用自定义图片" : "未使用图片";
-    public string ScreenSkinText => File.Exists(_settings.ScreenSkinPath) ? "已启用自定义图片" : "未使用图片";
+    public string ScreenImageText => _screenImages.GetState(_displayLayout.CurrentLayout) switch
+    {
+        ScreenImageState.Ready => "已启用 · 裁剪比例与当前显示器一致",
+        ScreenImageState.NeedsCrop => "需要重新裁剪后才能显示",
+        ScreenImageState.MissingOrDamaged => "图片资源缺失或损坏",
+        _ => "未使用图片"
+    };
+
+    public bool HasScreenImage => _screenImages.GetState(_displayLayout.CurrentLayout) != ScreenImageState.None;
 
     [ObservableProperty]
     private string _newProcessName = string.Empty;
@@ -321,8 +334,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(AutoBackupDirectory));
         OnPropertyChanged(nameof(AutoBackupRetentionCount));
         OnPropertyChanged(nameof(SelectedPalette));
-        OnPropertyChanged(nameof(KeyboardSkinText));
-        OnPropertyChanged(nameof(ScreenSkinText));
+        RefreshScreenImageState();
         ReloadExcluded();
         ReloadInputDiagnostics();
         _ = RefreshDataStatusAsync();
@@ -530,25 +542,46 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ImportKeyboardSkin() => ImportSkin(true);
-
-    [RelayCommand]
-    private void ImportScreenSkin() => ImportSkin(false);
-
-    [RelayCommand]
-    private void ClearKeyboardSkin()
+    private void ImportScreenImage()
     {
-        _settings.KeyboardSkinPath = null;
-        _settings.Save();
-        OnPropertyChanged(nameof(KeyboardSkinText));
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选择屏幕热力图图片",
+            Filter = "图片|*.png;*.jpg;*.jpeg;*.bmp",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            var source = _screenImages.LoadExternalSource(dialog.FileName);
+            ShowCropDialog(source, null);
+        }
+        catch (Exception ex)
+        {
+            WpfMessageBox.Show("图片导入失败：" + ex.Message, ProductInfo.Name,
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
     }
 
     [RelayCommand]
-    private void ClearScreenSkin()
+    private void RecropScreenImage()
     {
-        _settings.ScreenSkinPath = null;
-        _settings.Save();
-        OnPropertyChanged(nameof(ScreenSkinText));
+        var source = _screenImages.LoadManagedSource();
+        if (source is null)
+        {
+            WpfMessageBox.Show("当前图片资源缺失或损坏，请重新导入。", ProductInfo.Name,
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            RefreshScreenImageState();
+            return;
+        }
+        ShowCropDialog(source, _settings.ScreenImageCrop);
+    }
+
+    [RelayCommand]
+    private void ClearScreenImage()
+    {
+        _screenImages.Remove();
+        RefreshScreenImageState();
     }
 
     [RelayCommand]
@@ -702,48 +735,31 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsBackupWeekly));
     }
 
-    private void ImportSkin(bool keyboard)
+    private void ShowCropDialog(System.Windows.Media.Imaging.BitmapSource source, ScreenImageCropSettings? existing)
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = keyboard ? "选择键盘热力图皮肤" : "选择屏幕覆盖皮肤",
-            Filter = "图片|*.png;*.jpg;*.jpeg;*.bmp;*.webp"
-        };
-        if (dialog.ShowDialog() != true) return;
         try
         {
-            Directory.CreateDirectory(_paths.SkinsDirectory);
-            var destination = Path.Combine(_paths.SkinsDirectory, keyboard ? "keyboard-skin.png" : "screen-skin.png");
-            SaveNormalizedImage(dialog.FileName, destination);
-            if (keyboard) _settings.KeyboardSkinPath = destination;
-            else _settings.ScreenSkinPath = destination;
-            _settings.Save();
-            OnPropertyChanged(keyboard ? nameof(KeyboardSkinText) : nameof(ScreenSkinText));
+            var window = new ScreenImageCropWindow(source, _displayLayout.CurrentLayout, existing)
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+            if (window.ShowDialog() == true && window.Result is not null)
+            {
+                _screenImages.Save(source, window.Result);
+                RefreshScreenImageState();
+            }
         }
         catch (Exception ex)
         {
-            WpfMessageBox.Show("图片导入失败：" + ex.Message, ProductInfo.Name,
+            WpfMessageBox.Show("图片处理失败：" + ex.Message, ProductInfo.Name,
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
     }
 
-    private static void SaveNormalizedImage(string source, string destination)
+    private void RefreshScreenImageState()
     {
-        using var stream = File.OpenRead(source);
-        var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
-        var frame = decoder.Frames[0];
-        const int maxDimension = 2048;
-        BitmapSource output = frame;
-        var largest = Math.Max(frame.PixelWidth, frame.PixelHeight);
-        if (largest > maxDimension)
-        {
-            var scale = maxDimension / (double)largest;
-            output = new TransformedBitmap(frame, new System.Windows.Media.ScaleTransform(scale, scale));
-        }
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(output));
-        using var target = File.Create(destination);
-        encoder.Save(target);
+        OnPropertyChanged(nameof(ScreenImageText));
+        OnPropertyChanged(nameof(HasScreenImage));
     }
 
     private void End()

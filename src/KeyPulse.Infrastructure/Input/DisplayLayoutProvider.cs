@@ -26,6 +26,8 @@ public sealed class DisplayLayoutProvider : IDisposable
         return new PointerPosition(point.X, point.Y, layout, monitor);
     }
 
+    public DisplayLayout CurrentLayout => Volatile.Read(ref _current);
+
     public void Dispose() => _refreshTimer.Dispose();
 
     private void Refresh()

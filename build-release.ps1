@@ -26,6 +26,7 @@ dotnet publish (Join-Path $repositoryRoot "src\KeyPulse.App\KeyPulse.App.csproj"
     --self-contained true `
     -m:1 `
     --output $publishDirectory `
+    -p:NuGetAudit=false `
     -p:DebugType=None `
     -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) {

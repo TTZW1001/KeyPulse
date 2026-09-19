@@ -62,6 +62,8 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<TrayService>();
                     services.AddSingleton<PowerEventService>();
                     services.AddSingleton<ThemeService>();
+                    services.AddSingleton<ScreenImageService>();
+                    services.AddSingleton<PointerHeatmapRenderer>();
                     services.AddSingleton<DashboardViewModel>();
                     services.AddSingleton<KeyboardViewModel>();
                     services.AddSingleton<MouseViewModel>();

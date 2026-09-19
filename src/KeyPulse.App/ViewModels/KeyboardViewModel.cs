@@ -1,8 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
 using System.Windows.Threading;
-using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KeyPulse.App.Services;
@@ -124,12 +122,6 @@ public sealed partial class KeyboardViewModel : ObservableObject
     [ObservableProperty]
     private string _dataStateText = "正在加载…";
 
-    [ObservableProperty]
-    private BitmapSource? _keyboardSkinImage;
-
-    [ObservableProperty]
-    private double _keyOpacity = 1;
-
     public bool IsTodayRange
     {
         get => _range == KeyboardRange.Today;
@@ -198,7 +190,6 @@ public sealed partial class KeyboardViewModel : ObservableObject
             await Task.WhenAll(keysTask, shortcutsTask).ConfigureAwait(false);
             await _dispatcher.InvokeAsync(() =>
             {
-                LoadSkin();
                 ApplyCounts(keysTask.Result, shortcutsTask.Result);
                 _lastSuccessfulUpdate = DateTime.Now;
                 DataStateText = "更新于 " + _lastSuccessfulUpdate.Value.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
@@ -324,26 +315,6 @@ public sealed partial class KeyboardViewModel : ObservableObject
     private void OnFlushed() => Refresh();
 
     private void OnThemeChanged() => Refresh();
-
-    private void LoadSkin()
-    {
-        var path = _settings.KeyboardSkinPath;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-        {
-            KeyboardSkinImage = null;
-            KeyOpacity = 1;
-            return;
-        }
-        using var stream = File.OpenRead(path);
-        var image = new BitmapImage();
-        image.BeginInit();
-        image.CacheOption = BitmapCacheOption.OnLoad;
-        image.StreamSource = stream;
-        image.EndInit();
-        image.Freeze();
-        KeyboardSkinImage = image;
-        KeyOpacity = 0.78;
-    }
 
     private static Media.Color Lerp(Media.Color from, Media.Color to, double t)
     {

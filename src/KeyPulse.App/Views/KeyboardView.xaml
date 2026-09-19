@@ -43,7 +43,6 @@
             <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left"
                      MaxHeight="310" AutomationProperties.AutomationId="HeatmapScaler">
                 <Grid Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}">
-                <Image Source="{Binding KeyboardSkinImage}" Stretch="UniformToFill" Opacity="0.86"/>
                 <ItemsControl ItemsSource="{Binding Keys}" Width="{Binding CanvasWidth}"
                               Height="{Binding CanvasHeight}" AutomationProperties.AutomationId="Heatmap">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -56,7 +55,6 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Width="{Binding Width}" Height="{Binding Height}" Background="{Binding Fill}"
-                                    Opacity="{Binding DataContext.KeyOpacity, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1"
                                     CornerRadius="4" ToolTip="{Binding HoverText}"
                                     AutomationProperties.Name="{Binding HoverText}">

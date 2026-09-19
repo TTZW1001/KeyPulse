@@ -13,6 +13,20 @@ public sealed class SettingsXamlRegressionTests
         Assert.Contains("Text=\"{Binding AutoBackupDirectory, Mode=OneWay}\"", xaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void HeatmapAppearance_HasScreenCropControls_AndNoKeyboardImageControls()
+    {
+        var root = FindRepositoryRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "Views", "SettingsView.xaml"));
+        var keyboardXaml = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "Views", "KeyboardView.xaml"));
+
+        Assert.Contains("ImportScreenImageCommand", xaml, StringComparison.Ordinal);
+        Assert.Contains("RecropScreenImageCommand", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("KeyboardSkin", xaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("KeyboardSkin", keyboardXaml, StringComparison.Ordinal);
+        Assert.DoesNotContain("KeyOpacity", keyboardXaml, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
