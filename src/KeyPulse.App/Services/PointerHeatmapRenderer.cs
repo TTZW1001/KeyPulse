@@ -73,14 +73,19 @@ public sealed class PointerHeatmapRenderer
                     continue;
                 }
 
-                var gray = (0.114 * blurred[index]) + (0.587 * blurred[index + 1]) + (0.299 * blurred[index + 2]);
-                var coldB = ((gray * 0.68) + (blurred[index] * 0.32)) * 0.43;
-                var coldG = ((gray * 0.68) + (blurred[index + 1] * 0.32)) * 0.43;
-                var coldR = ((gray * 0.68) + (blurred[index + 2] * 0.32)) * 0.43;
-                var reveal = mask[(y * width) + x];
-                output[index] = Blend(coldB, source[index], reveal);
-                output[index + 1] = Blend(coldG, source[index + 1], reveal);
-                output[index + 2] = Blend(coldR, source[index + 2], reveal);
+                var reveal = Math.Clamp(mask[(y * width) + x], 0, 1);
+                var cleared = SmoothStep(0.06, 0.96, reveal);
+                var sharpness = SmoothStep(0.16, 0.82, reveal);
+                var fogAlpha = 0.965 * (1 - Math.Pow(cleared, 0.86));
+                var luminance = (0.114 * blurred[index]) + (0.587 * blurred[index + 1]) +
+                                (0.299 * blurred[index + 2]);
+                var fog = Math.Clamp(234 + ((luminance - 128) * 0.045), 226, 240);
+                var imageB = Mix(blurred[index], source[index], sharpness);
+                var imageG = Mix(blurred[index + 1], source[index + 1], sharpness);
+                var imageR = Mix(blurred[index + 2], source[index + 2], sharpness);
+                output[index] = Blend(imageB, fog, fogAlpha);
+                output[index + 1] = Blend(imageG, fog, fogAlpha);
+                output[index + 2] = Blend(imageR, fog, fogAlpha);
                 output[index + 3] = 0xFF;
             }
         return CreateBitmap(output, width, height);
@@ -240,8 +245,17 @@ public sealed class PointerHeatmapRenderer
         return image;
     }
 
-    private static byte Blend(double cold, byte hot, double amount) =>
-        (byte)Math.Clamp(Math.Round(cold + ((hot - cold) * Math.Clamp(amount, 0, 1))), 0, 255);
+    private static byte Blend(double from, double to, double amount) =>
+        (byte)Math.Clamp(Math.Round(Mix(from, to, amount)), 0, 255);
+
+    private static double Mix(double from, double to, double amount) =>
+        from + ((to - from) * Math.Clamp(amount, 0, 1));
+
+    private static double SmoothStep(double edge0, double edge1, double value)
+    {
+        var normalized = Math.Clamp((value - edge0) / Math.Max(0.0001, edge1 - edge0), 0, 1);
+        return normalized * normalized * (3 - (2 * normalized));
+    }
 
     private static void FillRect(byte[] pixels, int width, int height, int left, int top, int right, int bottom,
         byte r, byte g, byte b, byte a)

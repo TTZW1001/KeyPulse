@@ -15,7 +15,9 @@
 - Heatmaps provide four built-in palettes. Keyboard image skins were removed after visual review.
 - A user-provided screen image is copied into the local KeyPulse data directory, cropped at the
   virtual-desktop aspect ratio without stretching, and revealed by a continuous trajectory-density
-  mask with local click boosts. UI preview and PNG export share the renderer.
+  mask with local click boosts. A near-opaque neutral fog layer hides cold areas and is progressively
+  wiped away by activity, instead of leaving recognizable blurred silhouettes visible everywhere.
+  UI preview and PNG export share the renderer.
 - Managed screen-image sources are capped at 4096 px; rendered output is capped at 2048 px.
   Crop metadata includes the display-layout signature so changed layouts request a safe recrop.
 - The About section links to the project repository using a local theme-adaptive GitHub mark.

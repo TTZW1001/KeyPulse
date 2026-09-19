@@ -54,21 +54,21 @@ public static class HeatRevealMaskBuilder
         var clickMaximum = relativeIntensity
             ? clicks.Select(point => point.Count).DefaultIfEmpty(1L).Max()
             : result.Clicks.Select(point => point.Count).DefaultIfEmpty(1L).Max();
-        var radius = Math.Clamp(Math.Min(width, height) / 18, 10, 48);
+        var radius = Math.Clamp(Math.Min(width, height) / 22, 9, 40);
         foreach (var point in clicks)
         {
             var monitor = result.Layout.Monitors.FirstOrDefault(item => item.Id == point.MonitorId);
             if (monitor is null) continue;
             var centerX = ScaleX(monitor.Left + point.X, result, width);
             var centerY = ScaleY(monitor.Top + point.Y, result, height);
-            var strength = 0.22 + (0.33 * Scale(point.Count, Math.Max(1L, clickMaximum), logarithmic));
+            var strength = 0.16 + (0.27 * Scale(point.Count, Math.Max(1L, clickMaximum), logarithmic));
             AddSoftSpot(mask, width, height, centerX, centerY, radius, strength);
         }
 
         for (var i = 0; i < mask.Length; i++)
         {
-            var value = Math.Clamp(mask[i], 0, 1);
-            mask[i] = (float)Math.Clamp(1 - Math.Exp(-3.2 * value), 0, 1);
+            var value = Math.Pow(Math.Clamp(mask[i], 0, 1), 1.55);
+            mask[i] = (float)Math.Clamp(1 - Math.Exp(-4.2 * value), 0, 1);
         }
         return mask;
     }
