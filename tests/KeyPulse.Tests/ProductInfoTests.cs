@@ -19,7 +19,7 @@ public class ProductInfoTests
     [Fact]
     public void Version_IsCurrentRelease()
     {
-        Assert.Equal("1.3.0", ProductInfo.Version);
+        Assert.Equal("1.3.1", ProductInfo.Version);
     }
 
     [Fact]

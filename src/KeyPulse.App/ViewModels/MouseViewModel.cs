@@ -23,6 +23,7 @@ namespace KeyPulse.App.ViewModels;
 public sealed partial class MouseViewModel : ObservableObject
 {
     private const double ShareBarMax = 180;
+    private const int PreviewHeatmapMaxDimension = 480;
     private static readonly SKColor Accent = new(0x4E, 0x6E, 0x9E);
 
     private readonly IMouseQuery _query;
@@ -440,11 +441,14 @@ public sealed partial class MouseViewModel : ObservableObject
         var monitor = SelectedMonitor?.Value;
         var accent = HeatmapPaletteService.Accent(_settings.HeatmapPalette);
         ClickHeatmapImage = _heatmapRenderer.Render(
-            _pointerResult, PointerHeatmapMode.Clicks, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale, accent);
+            _pointerResult, PointerHeatmapMode.Clicks, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale,
+            accent, PreviewHeatmapMaxDimension);
         TrajectoryHeatmapImage = _heatmapRenderer.Render(
-            _pointerResult, PointerHeatmapMode.Trajectory, monitor, null, UseRelativeIntensity, UseLogScale, accent);
+            _pointerResult, PointerHeatmapMode.Trajectory, monitor, null, UseRelativeIntensity, UseLogScale,
+            accent, PreviewHeatmapMaxDimension);
         CoverageHeatmapImage = _heatmapRenderer.Render(
-            _pointerResult, PointerHeatmapMode.ImageReveal, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale, accent);
+            _pointerResult, PointerHeatmapMode.ImageReveal, monitor, SelectedButton?.Value, UseRelativeIntensity, UseLogScale,
+            accent, PreviewHeatmapMaxDimension);
         CoveragePanelTitle = _heatmapRenderer.HasReadyScreenImage(_pointerResult)
             ? "图片揭示（累计活动）"
             : "覆盖挑战";

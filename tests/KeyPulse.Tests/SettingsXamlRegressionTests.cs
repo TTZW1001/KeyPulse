@@ -27,6 +27,19 @@ public sealed class SettingsXamlRegressionTests
         Assert.DoesNotContain("KeyOpacity", keyboardXaml, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MouseHeatmaps_UseScrollFriendlyRendering()
+    {
+        var root = FindRepositoryRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "Views", "MouseView.xaml"));
+        var viewModel = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "ViewModels", "MouseViewModel.cs"));
+
+        Assert.True(xaml.Split("CacheMode=\"BitmapCache\"").Length - 1 >= 2,
+            "The heatmap preview group and trend chart must be cached while scrolling.");
+        Assert.Equal(3, xaml.Split("RenderOptions.BitmapScalingMode=\"LowQuality\"").Length - 1);
+        Assert.Contains("PreviewHeatmapMaxDimension = 480", viewModel, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

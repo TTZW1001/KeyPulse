@@ -1,6 +1,6 @@
 # KeyPulse Development Status
 
-Current Phase: P25 — V1.3.0 activity insight, reports, and heatmap personalization
+Current Phase: P26 — V1.3.1 mouse-page rendering performance
 
 ## Completed
 
@@ -30,10 +30,11 @@ Current Phase: P25 — V1.3.0 activity insight, reports, and heatmap personaliza
 - P23 V1.2.0 local insights, data governance, and input accuracy
 - P24 V1.2.1 interface consistency and preference persistence
 - P25 V1.3.0 activity insight, reports, and heatmap personalization
+- P26 V1.3.1 mouse-page rendering performance
 
 ## Last Verified Commit
 
-V1.3.0 release candidate — verified with 163 Release tests
+V1.3.1 release candidate — verified with 164 Release tests and an automated mouse-page scroll benchmark
 
 ## Known Issues
 

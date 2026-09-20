@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using KeyPulse.Core;
 using KeyPulse.Core.Statistics;
 using MediaBrushes = System.Windows.Media.Brushes;
 using MediaColor = System.Windows.Media.Color;
@@ -37,7 +38,7 @@ public sealed class ReportExportService
             <div class="card"><div class="label">鼠标点击</div><div class="value">{{{report.Current.MouseClickCount:N0}}}</div><div class="change">{{{Compare(report.Current.MouseClickCount,report.Comparison.MouseClickCount)}}}</div></div></div>
             <section class="section"><h2>活动变化</h2><div class="chart">{{{bars}}}</div></section>
             <section class="section"><h2>本期摘要</h2><div class="facts"><div class="fact"><div class="label">最常用按键</div><b>{{{H(report.TopKey ?? "暂无")}}} · {{{report.TopKeyCount:N0}}} 次</b></div><div class="fact"><div class="label">有效使用最长的应用</div><b>{{{H(report.TopApp ?? "暂无")}}} · {{{Duration(report.TopAppSeconds)}}}</b></div><div class="fact"><div class="label">滚轮事件</div><b>{{{report.Current.WheelEventCount:N0}}} 次</b></div><div class="fact"><div class="label">鼠标移动</div><b>{{{report.Current.DistancePixels:N0}}} px</b></div></div></section>
-            <footer>由 KeyPulse 1.3.0 生成 · 对比区间：{{{report.ComparisonFrom:yyyy-MM-dd}}} 至 {{{report.ComparisonTo:yyyy-MM-dd}}}</footer></main></body></html>
+            <footer>由 KeyPulse {{{ProductInfo.Version}}} 生成 · 对比区间：{{{report.ComparisonFrom:yyyy-MM-dd}}} 至 {{{report.ComparisonTo:yyyy-MM-dd}}}</footer></main></body></html>
             """;
         await File.WriteAllTextAsync(path, html, new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
     }
@@ -88,7 +89,7 @@ public sealed class ReportExportService
             DrawText(dc, $"最常用按键  {report.TopKey ?? "暂无"} · {report.TopKeyCount:N0} 次", 68, 722, 18, text, FontWeights.SemiBold);
             DrawText(dc, $"有效使用最长应用  {report.TopApp ?? "暂无"} · {Duration(report.TopAppSeconds)}", 68, 764, 18, text, FontWeights.SemiBold);
             DrawText(dc, $"滚轮 {report.Current.WheelEventCount:N0} 次   ·   鼠标移动 {report.Current.DistancePixels:N0} px", 68, 808, 15, muted);
-            DrawText(dc, "由 KeyPulse 1.3.0 生成 · 不包含输入内容、屏幕画面或窗口标题", 68, 852, 13, muted);
+            DrawText(dc, $"由 KeyPulse {ProductInfo.Version} 生成 · 不包含输入内容、屏幕画面或窗口标题", 68, 852, 13, muted);
         }
         var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(visual);
