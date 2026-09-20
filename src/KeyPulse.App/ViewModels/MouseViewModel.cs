@@ -36,6 +36,7 @@ public sealed partial class MouseViewModel : ObservableObject
     private readonly Dispatcher _dispatcher;
     private readonly object _gate = new();
     private bool _busy;
+    private bool _fullRefreshPending;
     private bool _chartsStale = true;
     private DateOnly _chartsDate;
     private KeyboardRange _range = KeyboardRange.Last7Days;
@@ -66,14 +67,14 @@ public sealed partial class MouseViewModel : ObservableObject
         _flush.Flushed += () =>
         {
             _chartsStale = true;
-            Refresh();
+            RefreshPointerData();
         };
         _theme.Changed += () =>
         {
             _chartsStale = true;
-            Refresh();
+            RefreshPointerData();
         };
-        _screenImages.Changed += Refresh;
+        _screenImages.Changed += RefreshPointerData;
         BuildChart(Array.Empty<MouseDayPoint>());
         SelectedButton = ButtonOptions[0];
     }
@@ -234,23 +235,33 @@ public sealed partial class MouseViewModel : ObservableObject
 
     public void Refresh()
     {
-        if (!_isActive) return;
-        OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
-        _ = RefreshAsync();
+        QueueRefresh(includePointer: false);
     }
 
     public void SetActive(bool active)
     {
         _isActive = active;
-        if (active) Refresh();
+        if (active) RefreshPointerData();
     }
 
-    public async Task RefreshAsync()
+    public Task RefreshAsync() => RefreshAsync(includePointer: true);
+
+    private void RefreshPointerData() => QueueRefresh(includePointer: true);
+
+    private void QueueRefresh(bool includePointer)
+    {
+        if (!_isActive) return;
+        OnPropertyChanged(nameof(ScreenPositionStatsEnabled));
+        _ = RefreshAsync(includePointer);
+    }
+
+    private async Task RefreshAsync(bool includePointer)
     {
         lock (_gate)
         {
             if (_busy)
             {
+                _fullRefreshPending |= includePointer;
                 return;
             }
 
@@ -261,7 +272,9 @@ public sealed partial class MouseViewModel : ObservableObject
         {
             var today = DateOnly.FromDateTime(DateTime.Now);
             var totals = await _query.GetMouseTotalsAsync(_range.GetStartDate(today), today).ConfigureAwait(false);
-            var pointer = await _pointerQuery.GetAsync(_heatmapRange.GetStartDate(today), today).ConfigureAwait(false);
+            var pointer = includePointer
+                ? await _pointerQuery.GetAsync(_heatmapRange.GetStartDate(today), today).ConfigureAwait(false)
+                : null;
             var needChart = _chartsStale || _chartsDate != today;
             IReadOnlyList<MouseDayPoint>? days = null;
             if (needChart)
@@ -272,7 +285,10 @@ public sealed partial class MouseViewModel : ObservableObject
             await _dispatcher.InvokeAsync(() =>
             {
                 ApplyTotals(totals);
-                ApplyPointer(pointer);
+                if (includePointer)
+                {
+                    ApplyPointer(pointer);
+                }
                 if (days is not null)
                 {
                     BuildChart(days);
@@ -291,15 +307,26 @@ public sealed partial class MouseViewModel : ObservableObject
         }
         finally
         {
+            var runPendingFullRefresh = false;
             lock (_gate)
             {
                 _busy = false;
+                if (_fullRefreshPending)
+                {
+                    _fullRefreshPending = false;
+                    runPendingFullRefresh = _isActive;
+                }
+            }
+
+            if (runPendingFullRefresh)
+            {
+                _ = RefreshAsync(includePointer: true);
             }
         }
     }
 
     [RelayCommand]
-    private Task Retry() => RefreshAsync();
+    private Task Retry() => RefreshAsync(includePointer: true);
 
     private void SetRange(KeyboardRange range)
     {
@@ -329,7 +356,7 @@ public sealed partial class MouseViewModel : ObservableObject
         OnPropertyChanged(nameof(IsHeatmapLast7DaysRange));
         OnPropertyChanged(nameof(IsHeatmapLast30DaysRange));
         OnPropertyChanged(nameof(IsHeatmapAllRange));
-        Refresh();
+        RefreshPointerData();
     }
 
     private void ApplyTotals(MouseTotals mouse)

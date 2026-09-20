@@ -34,7 +34,7 @@ Current Phase: P26 — V1.3.1 mouse-page rendering performance
 
 ## Last Verified Commit
 
-V1.3.1 release candidate — verified with 164 Release tests and an automated mouse-page scroll benchmark
+V1.3.1 release candidate — verified with 165 Release tests and an automated mouse-page scroll benchmark
 
 ## Known Issues
 
@@ -52,3 +52,10 @@ V1.3.1 release candidate — verified with 164 Release tests and an automated mo
 - A third-party global hook that suppresses both key-down and key-up remains impossible to observe
 - JSON export is not implemented; CSV export, PNG/HTML reports, and consistent ZIP backup/restore are available
 - Physical cursor distance remains a DPI-based estimate; exact screen-coordinate distance is shown in pixels
+
+## V1.3.1 Performance Fix
+
+- The one-second shell refresh now updates only lightweight mouse totals.
+- Pointer queries and the three heatmap bitmaps are rebuilt only when entering the page, after a persisted flush,
+  after changing heatmap filters or appearance, or after an explicit retry.
+- Real wheel-message benchmarking reduced mouse-page CPU time from about 2641 ms to 375 ms for the same scroll sequence.

@@ -28,16 +28,26 @@ public sealed class SettingsXamlRegressionTests
     }
 
     [Fact]
-    public void MouseHeatmaps_UseScrollFriendlyRendering()
+    public void MouseHeatmaps_AvoidExpensiveScrollCaches_AndUseSizedPreviews()
     {
         var root = FindRepositoryRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "Views", "MouseView.xaml"));
         var viewModel = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "ViewModels", "MouseViewModel.cs"));
 
-        Assert.True(xaml.Split("CacheMode=\"BitmapCache\"").Length - 1 >= 2,
-            "The heatmap preview group and trend chart must be cached while scrolling.");
+        Assert.DoesNotContain("CacheMode=\"BitmapCache\"", xaml, StringComparison.Ordinal);
         Assert.Equal(3, xaml.Split("RenderOptions.BitmapScalingMode=\"LowQuality\"").Length - 1);
         Assert.Contains("PreviewHeatmapMaxDimension = 480", viewModel, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MousePage_OneSecondRefresh_DoesNotRebuildPointerHeatmaps()
+    {
+        var root = FindRepositoryRoot();
+        var viewModel = File.ReadAllText(Path.Combine(root, "src", "KeyPulse.App", "ViewModels", "MouseViewModel.cs"));
+
+        Assert.Contains("QueueRefresh(includePointer: false)", viewModel, StringComparison.Ordinal);
+        Assert.Contains("if (includePointer)", viewModel, StringComparison.Ordinal);
+        Assert.Contains("_fullRefreshPending |= includePointer", viewModel, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

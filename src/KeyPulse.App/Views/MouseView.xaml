@@ -140,7 +140,7 @@
                       IsChecked="{Binding ScreenPositionStatsEnabled, Mode=TwoWay}"/>
             <TextBlock Text="只保存本机坐标统计，不截屏，不记录窗口名称或输入内容。关闭后仍可查看已有数据。"
                        Style="{StaticResource SecondaryText}" Margin="22,0,0,12"/>
-            <UniformGrid Columns="3" Margin="0,0,0,8" CacheMode="BitmapCache">
+            <UniformGrid Columns="3" Margin="0,0,0,8">
                 <StackPanel Margin="0,0,12,0" Visibility="{Binding ShowClickLayer, Converter={StaticResource BoolToVis}}"><TextBlock Text="点击位置" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding ClickHeatmapImage}" Height="170" Stretch="Uniform" RenderOptions.BitmapScalingMode="LowQuality"/></Border></StackPanel>
                 <StackPanel Margin="0,0,12,0" Visibility="{Binding ShowTrajectoryLayer, Converter={StaticResource BoolToVis}}"><TextBlock Text="鼠标轨迹" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding TrajectoryHeatmapImage}" Height="170" Stretch="Uniform" RenderOptions.BitmapScalingMode="LowQuality"/></Border></StackPanel>
                 <StackPanel Visibility="{Binding ShowCoverageLayer, Converter={StaticResource BoolToVis}}"><TextBlock Text="{Binding CoveragePanelTitle}" Style="{StaticResource SecondaryText}" Margin="0,0,0,6"/><Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1" Background="{DynamicResource ContentBackgroundBrush}" Padding="4"><Image Source="{Binding CoverageHeatmapImage}" Height="170" Stretch="Uniform" RenderOptions.BitmapScalingMode="LowQuality"/></Border></StackPanel>
@@ -155,8 +155,7 @@
             <Border Style="{StaticResource SectionDivider}"/>
             <lvc:CartesianChart Height="176" Series="{Binding TrendSeries}" XAxes="{Binding TrendXAxes}"
                                 YAxes="{Binding TrendYAxes}" LegendPosition="Hidden" TooltipPosition="Top"
-                                ZoomMode="None" AnimationsSpeed="0:0:0" Background="Transparent"
-                                CacheMode="BitmapCache"/>
+                                ZoomMode="None" AnimationsSpeed="0:0:0" Background="Transparent"/>
             <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                 <TextBlock Text="{Binding DataStateText}" Style="{StaticResource SecondaryText}" VerticalAlignment="Center"/>
                 <Button Content="刷新" Command="{Binding RetryCommand}" Margin="12,0,0,0"/>
